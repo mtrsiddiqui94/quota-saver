@@ -118,8 +118,7 @@ The model (default `qwen2.5:1.5b`, about 1 GB) is downloaded once. If it cannot 
 ## Development
 
 ```
-claude plugin validate .
-claude plugin test .
+scripts/check.sh        # validate, test and type-check; stops at the first failure
 ```
 
 Layout:

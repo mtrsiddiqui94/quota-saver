@@ -133,63 +133,6 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
   }
 
   if (platform === 'windows') {
-    const local = (await $.env.get('LOCALAPPDATA')) ?? `${h}\\AppData\\Local`
-    return ['ollama', `${local}\\Programs\\Ollama\\ollama.exe`]
-  }
-  if (platform === 'mac') {
-    return [
-      'ollama',
-      '/opt/homebrew/bin/ollama',
-      '/usr/local/bin/ollama',
-      '/Applications/Ollama.app/Contents/Resources/ollama',
-      `${h}/Applications/Ollama.app/Contents/Resources/ollama`,
-    ]
-  }
-  return ['ollama', '/usr/local/bin/ollama', '/usr/bin/ollama', `${h}/.local/bin/ollama`]
-}
-
-export async function findOllama($: EngineInterface, platform: Platform): Promise<string | undefined> {
-  for (const bin of await ollamaCandidates($, platform)) {
-    const r = await run($, [bin, '--version'])
-    if (r && r.exitCode === 0) return bin
-  }
-  return undefined
-}
-
-/** Installs Ollama with the platform's usual tool, falling back to the official download. */
-export async function installOllama($: EngineInterface, platform: Platform): Promise<boolean> {
-  const tenMinutes = 600_000
-  const h = await home($, platform)
-  const ok = (r: Run | undefined) => r !== undefined && r.exitCode === 0
-
-  if (platform === 'mac') {
-    for (const brew of ['brew', '/opt/homebrew/bin/brew', '/usr/local/bin/brew']) {
-      if (ok(await run($, [brew, '--version']))) {
-        say($, 'Installing Ollama with Homebrew')
-        // Each "==> ..." line is a step of brew's (downloading, pouring a dependency, linking).
-        const code = await runStreaming(
-          $,
-          [brew, 'install', 'ollama'],
-          line => {
-            const step = /^==> (.+)/.exec(line)?.[1]
-            if (step) say($, `brew: ${step.slice(0, 120)}`)
-          },
-          { HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' },
-        )
-        if (code === 0) return true
-        break
-      }
-    }
-    say($, 'Downloading the Ollama app')
-    const zip = `${h}/Downloads/Ollama-darwin.zip`
-    return (
-      ok(await run($, ['mkdir', '-p', `${h}/Applications`])) &&
-      ok(await run($, ['curl', '-fsSL', '-o', zip, 'https://ollama.com/download/Ollama-darwin.zip'], tenMinutes)) &&
-      ok(await run($, ['unzip', '-q', '-o', zip, '-d', `${h}/Applications`], tenMinutes))
-    )
-  }
-
-  if (platform === 'windows') {
     say($, 'Installing Ollama (winget)')
     const winget = ['winget', 'install', '--id', 'Ollama.Ollama', '-e', '--silent', '--accept-package-agreements', '--accept-source-agreements']
     if (ok(await run($, winget, tenMinutes))) return true

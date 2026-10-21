@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-10-21
+
+### Fixed
+- 0.8.0 shipped a duplicated block in the local setup code (it failed
+  type-checking). Removed.
+
+### Added
+- `scripts/check.sh`: validate, test and type-check, stopping at the first
+  failure.
+
 ## [0.8.0] - 2026-10-21
 
 ### Added
