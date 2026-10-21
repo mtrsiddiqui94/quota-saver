@@ -8,7 +8,7 @@ import type { Dictionary } from '../lib/memory'
 import { formatK, tokens } from '../lib/trim'
 import { lifetime, saveSettings, state, STORE } from '../core/state'
 import type { Options } from '../core/state'
-import { ensureLocal, hasModel } from './local-setup'
+import { ensureLocal, hasModel, setup } from './local-setup'
 import type { SetupOutcome } from './local-setup'
 import { refreshStatus } from './meter'
 
@@ -95,6 +95,13 @@ export function installCommands(on: On, opts: Options) {
       if (cfg.local === 'off') return { text: `Local model ab: ${name}. Chalu karne ke liye: /local on` }
       const outcome = await ensureLocal($, opts, cfg.local)
       return { text: LOCAL_OUTCOME[outcome](name, `Local model ab: ${name}.`, opts.ollamaUrl) }
+    }
+
+    if (setup.isRunning) {
+      const minutes = Math.max(0, Math.round(((await $.clock.now()) - setup.startedAt) / 60000))
+      return {
+        text: `Local setup chal raha hai (${minutes} min se).\nAbhi: ${setup.step}${setup.pct === undefined ? '' : ` ${setup.pct}%`}\n\nTayyar hote hi local mode khud chalu ho jaayega. Dobara dekhne ke liye /local likhein.`,
+      }
     }
 
     const models = await listLocalModels($, opts.ollamaUrl)

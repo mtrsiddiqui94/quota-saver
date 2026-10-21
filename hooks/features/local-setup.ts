@@ -21,6 +21,42 @@ async function run($: EngineInterface, argv: string[], timeoutMs = 30_000): Prom
   }
 }
 
+/** What the running setup is doing: read by /local, and said in the transcript as it goes. */
+export const setup = { isRunning: false, step: '', pct: undefined as number | undefined, startedAt: 0 }
+
+/** A step of the setup: one line in the conversation, and the status line. */
+function say($: EngineInterface, step: string, pct?: number) {
+  setup.step = step
+  setup.pct = pct
+  $.ui.status(`quota-saver: ${step}${pct === undefined ? '' : ` ${pct}%`}`)
+  $.ui.log(`quota-saver: ${step}${pct === undefined ? '' : ` ${pct}%`}`)
+}
+
+/** Runs a command and hands each line of its output to `onLine`; resolves its exit code, or undefined if it could not start. */
+async function runStreaming(
+  $: EngineInterface,
+  argv: string[],
+  onLine: (line: string) => void,
+  env?: Record<string, string>,
+): Promise<number | undefined> {
+  try {
+    const it = $.process.spawn({ argv, ...(env ? { env } : {}) })[Symbol.asyncIterator]()
+    let rest = ''
+    for (;;) {
+      const r = await it.next()
+      if (r.done) {
+        if (rest) onLine(rest)
+        return r.value?.code ?? undefined
+      }
+      const lines = (rest + r.value.text).split(/\r?\n|\r/)
+      rest = lines.pop() ?? ''
+      for (const line of lines) if (line.trim()) onLine(line)
+    }
+  } catch {
+    return undefined
+  }
+}
+
 export async function detectPlatform($: EngineInterface): Promise<Platform> {
   if ((await $.env.get('OS')) === 'Windows_NT') return 'windows'
   const uname = await run($, ['uname', '-s'])
@@ -67,10 +103,22 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
   if (platform === 'mac') {
     for (const brew of ['brew', '/opt/homebrew/bin/brew', '/usr/local/bin/brew']) {
       if (ok(await run($, [brew, '--version']))) {
-        if (ok(await run($, [brew, 'install', 'ollama'], tenMinutes))) return true
+        say($, 'Homebrew se Ollama install ho raha hai')
+        // Each "==> ..." line is a step of brew's (downloading, pouring a dependency, linking).
+        const code = await runStreaming(
+          $,
+          [brew, 'install', 'ollama'],
+          line => {
+            const step = /^==> (.+)/.exec(line)?.[1]
+            if (step) say($, `brew: ${step.slice(0, 120)}`)
+          },
+          { HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' },
+        )
+        if (code === 0) return true
         break
       }
     }
+    say($, 'Ollama app download ho raha hai')
     const zip = `${h}/Downloads/Ollama-darwin.zip`
     return (
       ok(await run($, ['mkdir', '-p', `${h}/Applications`])) &&
@@ -80,6 +128,7 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
   }
 
   if (platform === 'windows') {
+    say($, 'Ollama install ho raha hai (winget)')
     const winget = ['winget', 'install', '--id', 'Ollama.Ollama', '-e', '--silent', '--accept-package-agreements', '--accept-source-agreements']
     if (ok(await run($, winget, tenMinutes))) return true
     const setup = `${(await $.env.get('TEMP')) ?? h}\\OllamaSetup.exe`
@@ -89,6 +138,7 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
     )
   }
 
+  say($, 'Ollama install ho raha hai (install script)')
   if (ok(await run($, ['sh', '-c', 'curl -fsSL https://ollama.com/install.sh | sh'], tenMinutes))) return true
   // No root: unpack the official build into ~/.local instead.
   return (
@@ -122,23 +172,21 @@ export async function startServer($: EngineInterface, bin: string, url: string):
 
 /** Downloads the model, showing progress on the status line. */
 export async function pullModel($: EngineInterface, bin: string, model: string): Promise<boolean> {
-  let last = -1
-  try {
-    const pull = $.process.spawn({ argv: [bin, 'pull', model] })
-    for await (const { text } of pull) {
-      const pcts = [...text.matchAll(/(\d{1,3})%/g)].map(m => Number(m[1]))
-      const pct = pcts.at(-1)
-      if (pct !== undefined && pct !== last) {
-        last = pct
-        $.ui.status(`quota-saver: ${model} download ${pct}%`)
-      }
+  let lastSaid = -10
+  say($, `Model ${model} download shuru (lagbhag 2 GB)`, 0)
+  const code = await runStreaming($, [bin, 'pull', model], line => {
+    const pct = [...line.matchAll(/(\d{1,3})%/g)].map(m => Number(m[1])).at(-1)
+    if (pct === undefined) return
+    setup.pct = pct
+    $.ui.status(`quota-saver: ${model} download ${pct}%`)
+    // One line in the conversation every 10%, so progress shows on every surface.
+    if (pct >= lastSaid + 10) {
+      lastSaid = pct - (pct % 10)
+      say($, `Model ${model} download`, pct)
     }
-  } catch {
-    return false
-  } finally {
-    $.ui.status(undefined)
-  }
-  return true
+  })
+  $.ui.status(undefined)
+  return code === 0
 }
 
 export function hasModel(models: readonly string[], model: string): boolean {
@@ -146,8 +194,6 @@ export function hasModel(models: readonly string[], model: string): boolean {
   return models.some(m => m === model || m === want)
 }
 
-/** Whether a setup is running, so a second /local on does not start another. */
-const setup = { isRunning: false }
 
 /**
  * Makes local mode ready and switches it to `mode`. Returns at once with what
@@ -192,6 +238,7 @@ export async function ensureLocal(
   }
 
   setup.isRunning = true
+  setup.startedAt = await $.clock.now()
   void (async () => {
     try {
       if (!bin) {
@@ -204,6 +251,7 @@ export async function ensureLocal(
           return
         }
       }
+      say($, 'Ollama server chalu ho raha hai')
       if (!(await startServer($, bin, opts.ollamaUrl))) {
         $.ui.toast('Ollama server chalu nahi hua. Ek dafa Ollama app khol kar /local on dobara chalayein.')
         return
@@ -216,11 +264,13 @@ export async function ensureLocal(
         }
       }
       await turnOn()
+      say($, 'Local model tayyar!')
       $.ui.toast(`Local model tayyar! ${mode === 'on' ? '~ se shuru hone wale prompts' : 'Aam sawal'} ab aapki machine par chalenge, 0 Claude tokens.`)
     } catch {
       $.ui.toast('Local setup beech mein ruk gaya. /local on dobara chalayein.')
     } finally {
       setup.isRunning = false
+      $.ui.status(undefined)
     }
   })()
   return 'started'

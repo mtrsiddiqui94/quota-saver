@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-10-21
+
+### Added
+- Local setup progress shows in the conversation itself, one line per step
+  (each Homebrew step, server start, model download every 10%), so it is
+  visible on every surface, VS Code included.
+- `/local` while the setup runs says what it is doing and for how long.
+
+### Changed
+- Homebrew runs without its auto-update during the install, which is faster.
+
 ## [0.5.0] - 2026-10-21
 
 ### Changed
