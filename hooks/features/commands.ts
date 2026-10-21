@@ -36,6 +36,7 @@ export const COMMANDS = [
   { name: 'forget', description: 'Forget a shortcut, or clear the saved-answer cache', argumentHint: '[name | cache]' },
   { name: 'new-task', description: 'Summarise the session in 12 lines and clear the context (a cheap /compact + /clear)', argumentHint: '[next task, optional]' },
   { name: 'activity', description: 'Watch what Quota Saver does on each prompt: /activity on opens a live terminal, off stops, clear empties the log', argumentHint: '[on | off | text | clear]' },
+  { name: 'version', description: 'Which Quota Saver version is loaded, and how to update it' },
   { name: 'last-task', description: 'Bring back the last session summary: 12 lines instead of the whole history' },
 ] as const
 
@@ -58,6 +59,23 @@ async function getDictionary($: EngineInterface): Promise<Dictionary> {
 
 // The options of the current load, for the command hooks below.
 const ctx = { opts: undefined as unknown as Options }
+
+/** The version that is loaded, which can differ from the newest one published; empty when unknown. */
+async function loadedVersion($: EngineInterface): Promise<string> {
+  const manifest = await $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`).catch(() => undefined)
+  if (typeof manifest !== 'string') return ''
+  try {
+    return String(JSON.parse(manifest).version ?? '')
+  } catch {
+    return ''
+  }
+}
+
+const versionCommand: Hook<'command.run'> = async $ => {
+  const version = await loadedVersion($)
+  const update = 'For a newer one: /plugin → Marketplaces → quota-saver → Update, then /reload-plugins.'
+  return { text: version ? `Quota Saver ${version} is loaded. ${update}` : `Quota Saver could not read its version. ${update}` }
+}
 
 const reportCommand: Hook<'command.run'> = async ($, e) => {
   await ensureLoaded($)
@@ -109,10 +127,11 @@ const reportCommand: Hook<'command.run'> = async ($, e) => {
     const reset = resetIn !== undefined ? `, resets in ${humanMinutes(resetIn)}` : ''
     return `${label(r.kind)}: ${r.percentUsed}%${pace}${reset}`
   })
+  const version = await loadedVersion($)
   const lines = [
     'Quota Saver: token savings',
     '',
-    `Status: ${cfg.isEnabled ? 'on' : 'OFF (/quota-saver on)'} · local model: ${cfg.local}${cfg.local === 'off' ? '' : ` (${cfg.localModel})`}`,
+    `Status: ${cfg.isEnabled ? 'on' : 'OFF (/quota-saver on)'}${version ? ` · version ${version}` : ''} · local model: ${cfg.local}${cfg.local === 'off' ? '' : ` (${cfg.localModel})`}`,
     '',
     `This session: ~${formatK(tokens(session.savedChars))} tokens saved (${session.trims} outputs shortened, ${session.blockedReads} wasteful reads stopped, ${session.cacheHits} saved answers, ${session.localAnswers} local model answers)`,
     ...compareLines(session, life),
@@ -222,6 +241,9 @@ export function installCommands(on: On, opts: Options) {
 
   on('command.run', { command: 'shortcut' }, shortcutCommand).catch(() => FAIL)
   on('command.run', { command: 'quota-saver:shortcut' }, shortcutCommand).catch(() => FAIL)
+
+  on('command.run', { command: 'version' }, versionCommand).catch(() => FAIL)
+  on('command.run', { command: 'quota-saver:version' }, versionCommand).catch(() => FAIL)
 
   on('command.run', { command: 'forget' }, forgetCommand).catch(() => FAIL)
   on('command.run', { command: 'quota-saver:forget' }, forgetCommand).catch(() => FAIL)

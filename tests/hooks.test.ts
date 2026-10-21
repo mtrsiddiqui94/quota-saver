@@ -294,6 +294,12 @@ describe('switches and dictionary commands', () => {
     expect(res.text).toContain('Context: 25%')
   })
 
+  test('/version says which version is loaded and how to update', async ($, on) => {
+    world(on)
+    const res = await run($, 'version', '')
+    expect(res.text).toMatch(/^Quota Saver (\d+\.\d+\.\d+ is loaded|could not read its version)\. For a newer one: \/plugin/)
+  })
+
   test('/last-task with nothing saved says so', async ($, on) => {
     world(on)
     const res = await run($, 'last-task', '')
