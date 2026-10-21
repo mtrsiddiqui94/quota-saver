@@ -18,6 +18,8 @@
 | **Similar-question cache** | With the local model on, a question that *means* the same as one answered before ("docker kya cheez hai" after "docker kya hai") is answered from disk too. A 46 MB local embedding model compares meanings; the bar is strict (cosine 0.92), and the reply names the earlier question. Setting `semanticCache`. |
 | **Local answer cache** | A question answered before, in a turn that changed nothing, is answered from disk for **0 tokens**. Roman Urdu spelling variants ("kia ha" / "kya hai") count as the same question. Entries expire after 3 days. A leading `!` always asks Claude fresh. |
 | **Local model team (Ollama)** | Optional, off by default. General questions run on your machine for **0 Claude tokens**: a fast model takes short questions, a strong one the rest. Every local answer is checked (wrong script, loops, empty); a bad one goes to the other model, then to Claude. `/local pick` measures the installed models on this machine and sets the team. Reasoning models answer without their slow "thinking" step. Project work always goes to Claude. |
+| **Cache keeper** | The prompt cache expires after a quiet spell (an hour on a subscription, five minutes on an API key), and the next message then re-sends the whole context at full price. Five minutes before that, a notice says so: send the next message now, or `/new-task` first. |
+| **Project memory** | Each project keeps its own 12-line note. With the local model on, it is rewritten every 8 turns for free; a new session in the project mentions it, and `/last-task` loads it instead of the old history. |
 | **Smart handoff** | `/new-task` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/last-task` loads the last note in a new session instead of the whole history. |
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
 | **Audit** | `/quota-saver audit` measures what rides on *every* request before your prompt: MCP tool schemas per server, CLAUDE.md and other memory files, skills and agents, and says what to cut. Runs once by itself per context and speaks up only if something is heavy. |
@@ -75,6 +77,22 @@ claude plugin install quota-saver@quota-saver
 Every command is also in the `/` menu as `quota-saver:<name>` (for example `/quota-saver:status`, `/quota-saver:activity`), so it shows in editors whose menu lists only file commands. Both forms do the same thing, without a model call.
 
 Prefixes: `QS_RAW=1 <command>` (in a command Claude runs) keeps its output whole. `!` sends a prompt straight to Claude (skips cache and local model). `~` sends it to the local model when `/local` is on.
+
+## Which local model
+
+Measured on an Intel Mac without a GPU (16 GB RAM), four questions each (English, Roman Urdu, a technical comparison, a code question), reasoning off:
+
+| Model | Size | Avg answer | Answers right | Verdict |
+|---|---|---|---|---|
+| **gemma4:e2b** | 4.6 GB | 5.7 s | 4/4 | Best: strong model of the team |
+| **qwen3:1.7b** | 1.4 GB | 1.9 s | 4/4 (replies in English) | Fastest: fast model, and the default first download |
+| qwen3.5:2b | 2.7 GB | 8.0 s | 4/4 | Good, slower than gemma4 |
+| qwen3.5:4b | 3.3 GB | 12.1 s | 4/4 | Good, twice gemma4's time |
+| gemma3:4b | 3.4 GB | 12.6 s | 4/4 | Slower, no better |
+| ministral-3:3b | 3.0 GB | 10.3 s | 3/4 | Got `let` wrong |
+| qwen2.5:3b | 1.9 GB | 7–10 s | 2/3 | Garbled Roman Urdu |
+
+With nothing picked by hand, `/local on` makes the best installed models the team (`gemma4:e2b` strong, `qwen3:1.7b` fast). `/local pick` measures them on your own machine instead. For the strongest local answers: `ollama pull gemma4:e2b`.
 
 ## Watching it work
 

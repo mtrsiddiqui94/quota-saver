@@ -915,3 +915,99 @@ describe('similar-question cache', () => {
     expect(seen.fetches.filter(u => u.endsWith('/api/embed')).length).toBe(0)
   })
 })
+
+describe('cache keeper', () => {
+  const big = { input_tokens: 500, output_tokens: 100, cache_read_input_tokens: 60_000, cache_creation_input_tokens: 0, model: 'claude-sonnet-5-5' }
+
+  test('on a subscription, a warning comes 5 minutes before the one-hour cache expires', async ($, on) => {
+    const { clock } = world(on, { usage: { rateLimits: [{ kind: 'five_hour', percentUsed: 10 }] } })
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'activity', 'on')
+    await $.turn.complete({ ...turnEnd('a'), usage: big })
+    await clock.advance(54 * 60_000)
+    expect((await run($, 'activity', 'text')).text).not.toContain('cache cools')
+    await clock.advance(2 * 60_000)
+    expect((await run($, 'activity', 'text')).text).toContain('cache cools in ~5 min')
+  })
+
+  test('a prompt sent in time cancels the warning; one sent too late is noted', async ($, on) => {
+    const { clock } = world(on)
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'activity', 'on')
+    await $.turn.complete({ ...turnEnd('a'), usage: big })
+    await clock.advance(60_000)
+    await submit($, 'next step')
+    await clock.advance(10 * 60_000)
+    let text = (await run($, 'activity', 'text')).text ?? ''
+    expect(text).not.toContain('cache cools')
+    await $.turn.complete({ ...turnEnd('b'), usage: big })
+    await clock.advance(20 * 60_000)
+    await submit($, 'back after a break')
+    text = (await run($, 'activity', 'text')).text ?? ''
+    expect(text).toContain('cache had expired (idle 20 min, lifetime 5 min)')
+  })
+
+  test('a small context is left alone', async ($, on) => {
+    const { clock } = world(on)
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'activity', 'on')
+    await $.turn.complete({ ...turnEnd('a'), usage: { ...big, cache_read_input_tokens: 1_000 } })
+    await clock.advance(120 * 60_000)
+    const text = (await run($, 'activity', 'text')).text ?? ''
+    expect(text).not.toContain('cache cools')
+    expect(text).not.toContain('cache had expired')
+  })
+})
+
+describe('project memory', () => {
+  const compose = { model: 'm', promptModel: 'm', surfaces: [], tools: [], outputStyle: null, traits: [] }
+  const haikuNote = (on: On, text: string) => {
+    on('session.messages', () => ({ value: [{ role: 'user', text: 'kaam', toolUses: [] }] }))
+    on('model.complete', () => ({ value: { isAnswered: true, text, usage: { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } }))
+    on('command.run', { command: 'clear' }, () => ({ text: '' }))
+  }
+
+  test("/last-task loads this project's own note", async ($, on) => {
+    world(on)
+    haikuNote(on, 'GOAL: login screen\nNEXT: tests')
+    on('prompt.compose', () => ({ sections: [] }))
+    await run($, 'new-task', '')
+    const res = await run($, 'last-task', '')
+    expect(res.text).toContain("this project's last task")
+    expect(res.text).toContain('GOAL: login screen')
+    const composed = await $.prompt.compose(compose)
+    expect(composed.sections.find(s => s.id === 'quota-saver:handoff')?.text).toContain('NEXT: tests')
+  })
+
+  test('a note from another project is offered as the latest, and labelled so', async ($, on) => {
+    world(on, { store: { handoff: { note: 'GOAL: other app', at: 1 }, projectNotes: { '/elsewhere': { note: 'GOAL: other app', at: 1 } } } })
+    const res = await run($, 'last-task', '')
+    expect(res.text).toContain('another project')
+  })
+
+  test('with the local model on, a note is written every 8 turns without Claude', async ($, on) => {
+    world(on, {
+      ollama: (url: string) =>
+        url.endsWith('/api/tags')
+          ? { status: 200, text: JSON.stringify({ models: [{ name: 'qwen2.5:1.5b' }] }) }
+          : url.endsWith('/api/embed')
+            ? { status: 404, text: '' }
+            : { status: 200, text: JSON.stringify({ message: { content: 'GOAL: offline todo app\nNEXT: sync' } }) },
+    })
+    on('session.messages', () => ({ value: [{ role: 'user', text: 'todo app bana rahe hain', toolUses: [] }] }))
+    on('turn.complete', () => ({ text: '' }))
+    let haikuCalls = 0
+    on('model.complete', () => {
+      haikuCalls += 1
+      return { value: { isAnswered: false, reason: 'empty-reply', usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } as never }
+    })
+    await run($, 'local', 'on')
+    for (let i = 0; i < 8; i++) await $.turn.complete(turnEnd(`t${i}`))
+    // let the background note finish: it waits on the network mocks, not the clock
+    for (let i = 0; i < 20; i++) await Promise.resolve()
+    await run($, 'activity', 'text')
+    const res = await run($, 'last-task', '')
+    expect(res.text).toContain('GOAL: offline todo app')
+    expect(haikuCalls).toBe(0)
+  })
+})

@@ -8,9 +8,10 @@ import { loadSettings, parseOptions, state } from './core/state'
 import { COMMANDS, installCommands } from './features/commands'
 import { installActivity } from './features/activity'
 import { auditOnce } from './features/audit'
+import { armCacheWarning } from './features/cache-keeper'
 import { recordTurnCompare } from './features/compare'
 import { warnModelSwitch } from './features/model-switch'
-import { installHandoff } from './features/handoff'
+import { autoNote, installHandoff, mentionNote } from './features/handoff'
 import { autostartLocal } from './features/local-setup'
 import { refreshStatus } from './features/meter'
 import { installOutlineTool, OUTLINE_SPEC } from './features/outline-tool'
@@ -29,6 +30,7 @@ export const register: Register = (on, options) => {
     await $.tool.register(OUTLINE_SPEC).catch(() => undefined)
     await autostartLocal($, opts).catch(() => undefined)
     await pruneArchive($).catch(() => undefined)
+    await mentionNote($).catch(() => undefined)
     return next(e)
   })
 
@@ -49,6 +51,8 @@ export const register: Register = (on, options) => {
       if (state.cfg.isEnabled) {
         await warnModelSwitch($, e.usage).catch(() => undefined)
         await auditOnce($).catch(() => undefined)
+        await armCacheWarning($).catch(() => undefined)
+        await autoNote($).catch(() => undefined)
       }
     }
     return done

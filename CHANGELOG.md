@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.17.0] - 2026-10-21
+
+### Added
+- Cache keeper (from Claude Code's prompt-caching docs): five minutes before
+  the main conversation's cache expires (one hour on a subscription, five
+  minutes on an API key; `CLAUDE_CODE_PROMPT_CACHE_TTL` and the related
+  variables are honoured), a notice says what the next message would re-send
+  at full price. A message sent after expiry is noted in `/activity`.
+- Project memory (after claude-mem and Mem0, without their Claude calls):
+  each project keeps its own note; with the local model on it is rewritten
+  every 8 turns at no Claude cost; a new session mentions it; `/last-task`
+  prefers this project's note.
+- Turning the plugin or a reply style on or off says that the next message
+  rebuilds the cache once.
+
+### Changed
+- Local team from what is installed, ranked by a benchmark on an Intel CPU:
+  `gemma4:e2b` strong, `qwen3:1.7b` fast. Default first download:
+  `qwen3:1.7b` (1.4 GB).
+
 ## [0.16.0] - 2026-10-21
 
 ### Added

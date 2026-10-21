@@ -65,7 +65,7 @@ const reportCommand: Hook<'command.run'> = async ($, e) => {
     await saveSettings($)
     await record($, 'info', `Quota Saver switched ${arg}`)
     await refreshStatus($).catch(() => undefined)
-    return { text: cfg.isEnabled ? 'Quota Saver is on.' : 'Quota Saver is off: everything works as plain Claude. Turn it back on with /quota-saver on' }
+    return { text: (cfg.isEnabled ? 'Quota Saver is on.' : 'Quota Saver is off: everything works as plain Claude. Turn it back on with /quota-saver on') + '\n(This changes the system prompt, so the next message rebuilds the prompt cache once: best between tasks.)' }
   }
 
   if (arg === 'audit') return { text: formatAudit(await audit($)) }
@@ -77,7 +77,7 @@ const reportCommand: Hook<'command.run'> = async ($, e) => {
     cfg.style = level
     await saveSettings($)
     await record($, 'info', `reply style set to ${level}`)
-    return { text: `Reply style: ${level}. ${level === 'off' ? 'Normal lean replies.' : level === 'lite' ? 'Short, plain replies.' : 'Telegraphic replies; code, paths and errors stay exact.'}` }
+    return { text: `Reply style: ${level}. ${level === 'off' ? 'Normal lean replies.' : level === 'lite' ? 'Short, plain replies.' : 'Telegraphic replies; code, paths and errors stay exact.'}\n(This changes the system prompt, so the next message rebuilds the prompt cache once: best between tasks.)` }
   }
   if (arg === 'week' || arg === 'month') {
     const days = arg === 'week' ? 7 : 30
@@ -121,6 +121,7 @@ const reportCommand: Hook<'command.run'> = async ($, e) => {
     '',
     'Nothing to remember: write normally, the plugin works out the rest.',
     'New task? /new-task · Back tomorrow? /last-task · Shortcuts? /shortcut · Local model? /local',
+    'Cache: keep one model per task (switching rebuilds the cache) · abandoned a path? /rewind keeps the cache, /compact rebuilds it · /usage shows the hit ratio',
     'Reports: /quota-saver week · /quota-saver audit (what every request carries) · /activity on (watch it live)',
     'Off/on: /quota-saver off · /quota-saver on',
   ]

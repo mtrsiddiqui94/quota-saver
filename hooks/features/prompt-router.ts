@@ -13,6 +13,7 @@ import { tokens } from '../lib/trim'
 import { embed, routeLocal } from '../lib/local'
 import { EMBED_MODEL } from './local-setup'
 import { answerLocally, teamOrder } from './local-team'
+import { noteCacheOnSubmit } from './cache-keeper'
 import { adviseModel } from './model-advisor'
 import { ANSWER_MAX, cacheKey, expand, lookup, nearest, remember } from '../lib/memory'
 import type { AnswerCache, Dictionary } from '../lib/memory'
@@ -42,6 +43,7 @@ function age(ms: number): string {
 export function installPromptRouter(on: On, opts: Options) {
   on('prompt.submit', async ($, e, next) => {
     await ensureLoaded($)
+    if (state.cfg.isEnabled && !e.command && !e.isMeta) await noteCacheOnSubmit($).catch(() => undefined)
     const { cfg, turn } = state
     turn.key = undefined
     turn.question = undefined

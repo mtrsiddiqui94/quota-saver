@@ -19,7 +19,62 @@ NEXT: the concrete next step
 DECISIONS: choices the user made that must be kept
 No preamble, nothing else.`
 
-async function makeHandoff($: EngineInterface, focus: string): Promise<string | undefined> {
+type Note = { note: string; at: number }
+type ProjectNotes = Record<string, Note>
+
+const NOTES_KEPT = 30
+
+/** Saves the note for this project (and as the latest overall, for /last-task elsewhere). */
+async function saveNote($: EngineInterface, note: string) {
+  const at = await $.clock.now()
+  const cwd = await $.session.cwd()
+  const book = ((await $.store.get(STORE.projectNotes)) ?? {}) as ProjectNotes
+  const kept = Object.entries({ ...book, [cwd]: { note, at } }).sort((a, b) => a[1].at - b[1].at).slice(-NOTES_KEPT)
+  await $.store.set(STORE.projectNotes, Object.fromEntries(kept))
+  await $.store.set(STORE.handoff, { note, at })
+}
+
+/** This project's note, else the latest one from anywhere. */
+async function loadNote($: EngineInterface): Promise<(Note & { isThisProject: boolean }) | undefined> {
+  const book = ((await $.store.get(STORE.projectNotes)) ?? {}) as ProjectNotes
+  const own = book[await $.session.cwd()]
+  if (own) return { ...own, isThisProject: true }
+  const latest = (await $.store.get(STORE.handoff)) as Partial<Note> | undefined
+  return latest?.note ? { note: latest.note, at: latest.at ?? 0, isThisProject: false } : undefined
+}
+
+const auto = { turns: 0, isRunning: false }
+// Turns between automatic notes; only with a local model, so it never costs Claude tokens.
+const AUTO_EVERY = 8
+
+/** Every few turns, with a local model on, the local model writes this project's note in the background. */
+export async function autoNote($: EngineInterface) {
+  auto.turns += 1
+  if (state.cfg.local === 'off' || !ctx.opts || auto.isRunning || auto.turns % AUTO_EVERY !== 0) return
+  auto.isRunning = true
+  void (async () => {
+    try {
+      const note = await makeHandoff($, '', false)
+      if (note) {
+        await saveNote($, note)
+        await record($, 'saved', `project note refreshed by the local model (0 Claude tokens): /last-task loads it in a new chat`)
+      }
+    } finally {
+      auto.isRunning = false
+    }
+  })()
+}
+
+/** At session start: if this project has a note, say so once (it is not loaded unasked: that would cost tokens). */
+export async function mentionNote($: EngineInterface) {
+  const book = ((await $.store.get(STORE.projectNotes)) ?? {}) as ProjectNotes
+  const own = book[await $.session.cwd()]
+  if (!own) return
+  const days = Math.floor(((await $.clock.now()) - own.at) / 86_400_000)
+  $.ui.toast(`Quota Saver: this project has a summary of your last task (${days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`}). /last-task loads its 12 lines instead of the old history.`)
+}
+
+async function makeHandoff($: EngineInterface, focus: string, allowHaiku = true): Promise<string | undefined> {
   const rows = await $.session.messages()
   const transcript = rows
     .slice(-80)
@@ -39,8 +94,10 @@ async function makeHandoff($: EngineInterface, focus: string): Promise<string | 
       await record($, 'saved', `summary written by local ${state.cfg.localModel}: 0 Claude tokens`)
       return local.text.trim()
     }
+    if (!allowHaiku) return undefined
     await record($, 'info', `local summary not usable → Haiku writes it`)
   }
+  if (!allowHaiku) return undefined
 
   const reply = await $.model.complete({
     model: 'haiku',
@@ -58,7 +115,7 @@ const newTaskCommand: Hook<'command.run'> = async ($, e) => {
   const note = await makeHandoff($, e.args.trim())
   if (!note) return { text: 'Could not write a summary (the session is empty or the model did not answer). Use /clear directly.' }
 
-  await $.store.set(STORE.handoff, { note, at: await $.clock.now() })
+  await saveNote($, note)
   await record($, 'saved', `session summarised by Haiku into ${note.split('\n').length} lines; context cleared, summary carried forward`)
   state.handoff.pending = note
   const isCleared = await $.command.run({ command: 'clear' }).then(
@@ -73,10 +130,11 @@ const newTaskCommand: Hook<'command.run'> = async ($, e) => {
 }
 
 const lastTaskCommand: Hook<'command.run'> = async $ => {
-  const saved = (await $.store.get(STORE.handoff)) as { note?: string } | undefined
-  if (!saved?.note) return { text: 'No saved summary. Run /new-task in a session first.' }
+  const saved = await loadNote($)
+  if (!saved) return { text: 'No saved summary. Run /new-task in a session first.' }
   state.handoff.active = saved.note
-  return { text: `Last summary loaded (instead of the whole history):\n\n${saved.note}` }
+  const whose = saved.isThisProject ? "this project's last task" : 'the last task (another project: none saved for this one yet)'
+  return { text: `Loaded the summary of ${whose}, instead of the whole history:\n\n${saved.note}` }
 }
 
 // The options of the current load, for the command hooks above.

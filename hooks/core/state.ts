@@ -13,6 +13,7 @@ export const STORE = {
   answers: 'answers',
   settings: 'settings',
   daily: 'daily',
+  projectNotes: 'projectNotes',
 } as const
 
 export type Options = {

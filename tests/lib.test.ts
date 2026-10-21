@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { detectIntent } from '../hooks/lib/intent'
 import { cacheKey, cosine, expand, lookup, nearest, normalize, parseEntry, remember } from '../hooks/lib/memory'
-import { hasModel } from '../hooks/features/local-setup'
+import { hasModel, teamFromInstalled } from '../hooks/features/local-setup'
 import { compareTurn } from '../hooks/features/compare'
 import { pickTeam, teamOrder } from '../hooks/features/local-team'
 import { judgeReply, stripThinking } from '../hooks/lib/judge'
@@ -230,4 +230,10 @@ test('app builds: mobile and web build output and folders are recognised', async
 test('a long prompt still gets its task type from its opening', async () => {
   const spec = 'Build a React Native todo app with offline sync. ' + 'Requirement detail. '.repeat(300)
   expect(detectIntent(spec)).toBe('build')
+})
+
+test('the team is made from what is installed, best first', async () => {
+  expect(teamFromInstalled(['qwen3:1.7b', 'gemma4:e2b'])).toEqual({ strong: 'gemma4:e2b', fast: 'qwen3:1.7b' })
+  expect(teamFromInstalled(['qwen3:1.7b'])).toEqual({ strong: 'qwen3:1.7b', fast: undefined })
+  expect(teamFromInstalled(['all-minilm'])).toEqual({ strong: undefined, fast: undefined })
 })

@@ -209,7 +209,20 @@ export function hasModel(models: readonly string[], model: string): boolean {
  * reports with a toast.
  */
 /** Small models that run well on a CPU, best first: tried in turn when one fails to download. */
-export const FALLBACK_MODELS = ['qwen3:4b', 'qwen3:1.7b', 'qwen2.5:1.5b', 'gemma3:4b', 'llama3.2:3b', 'gemma3:1b']
+export const FALLBACK_MODELS = ['qwen3:1.7b', 'gemma4:e2b', 'qwen3.5:2b', 'qwen2.5:1.5b', 'llama3.2:3b', 'gemma3:1b']
+
+// Ranked on an Intel CPU without a GPU (four questions: English, Roman Urdu, technical, code):
+// gemma4:e2b 5.7s with every answer right; qwen3:1.7b 1.9s; qwen3.5:2b 8.0s; qwen3.5:4b 12.1s;
+// gemma3:4b 12.6s; ministral-3:3b 10.3s with a wrong answer; qwen2.5 3b garbled Roman Urdu.
+const STRONG_ORDER = ['gemma4:e2b', 'qwen3.5:4b', 'qwen3:4b', 'qwen3.5:2b', 'gemma3:4b', 'llama3.2:3b', 'qwen3:1.7b', 'qwen2.5:1.5b']
+const FAST_ORDER = ['qwen3:1.7b', 'qwen3.5:0.8b', 'gemma3:1b', 'qwen2.5:1.5b']
+
+/** The best strong and fast models among those installed; fast only when it is a different, quicker model. */
+export function teamFromInstalled(models: readonly string[]): { strong?: string; fast?: string } {
+  const strong = STRONG_ORDER.find(m => hasModel(models, m))
+  const fast = FAST_ORDER.find(m => hasModel(models, m) && m !== strong)
+  return { strong, fast: strong && fast && STRONG_ORDER.indexOf(fast) > STRONG_ORDER.indexOf(strong) ? fast : undefined }
+}
 
 /** The embedding model behind similar-question hits: 46 MB, fast on a CPU. */
 export const EMBED_MODEL = 'all-minilm'
@@ -243,12 +256,16 @@ export async function ensureLocal(
     if (opts.semanticCache) void ensureEmbedModel($, opts).catch(() => undefined)
     return 'ready'
   }
-  // Nothing picked by hand and a good small model already installed: use it rather than download another.
-  const installed = models !== undefined && !cfg.isModelChosen ? FALLBACK_MODELS.find(m => hasModel(models, m)) : undefined
-  if (installed) {
-    cfg.localModel = installed
-    await turnOn()
-    return 'ready'
+  // Nothing picked by hand and good models already installed: make the best of them the team, download nothing.
+  if (models !== undefined && !cfg.isModelChosen) {
+    const team = teamFromInstalled(models)
+    if (team.strong) {
+      cfg.localModel = team.strong
+      cfg.fastModel = team.fast
+      await turnOn()
+      if (opts.semanticCache) void ensureEmbedModel($, opts).catch(() => undefined)
+      return 'ready'
+    }
   }
   const model = cfg.localModel
   if (setup.isRunning) return 'running'
