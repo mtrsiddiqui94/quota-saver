@@ -9,6 +9,7 @@
 | Feature | How it saves |
 |---|---|
 | **Output diet** | Long Bash, test, build, web and MCP output is cut to its head, its tail and the lines that look like errors *before* it enters the conversation, so it is not re-sent on every later turn. File contents (Read) are never cut. |
+| **Junk guard** | Whole reads of `node_modules`, `dist`, `build` and other dependency or build folders, lock files and minified bundles are refused once with the reason. Source files are never affected. |
 | **Read guard** | A whole read of a large file is refused once with a hint to search first. A re-read of an unchanged file is refused once. An identical retry always goes through. |
 | **Auto task detection** | "fix the login error", "ye samjhao", "tests chalao": the plugin recognises the kind of task and attaches a short, lean instruction for it. No commands to remember. |
 | **Personal dictionary** | `/yaad dp = deploy to staging, run tests first`. Then type `dp`, or `#dp` inside a sentence. Expanded locally. |
@@ -16,6 +17,10 @@
 | **Local model (Ollama)** | Optional, off by default. General questions run on a model on your machine for **0 Claude tokens**. Project work always goes to Claude. |
 | **Smart handoff** | `/naya-kaam` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/wapas` loads the last note in a new session instead of the whole history. |
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
+| **Audit** | `/quota-saver audit` measures what rides on *every* request before your prompt: MCP tool schemas per server, CLAUDE.md and other memory files, skills and agents, and says what to cut. Runs once by itself per context and speaks up only if something is heavy. |
+| **Quota alarm** | At 80% and 95% of the 5-hour or weekly limit, a notice says when it resets and how to stretch it. |
+| **Model-switch warning** | Changing model mid-conversation restarts the prompt cache, re-sending the whole context at full price. The plugin says how many tokens that cost. |
+| **Savings report** | `/quota-saver week` (or `month`): what was saved each day. |
 | **Meter** | Status line: `quota-saver · ctx 42% · 5h 30% · saved ~12k tok`, with a nudge at 65% and 85% context. |
 | **Lean rules** | A short system-prompt section: answer first, no recaps, search before reading, small edits. |
 
@@ -49,6 +54,8 @@ claude plugin install quota-saver@quota-saver
 | Command | |
 |---|---|
 | `/quota-saver` | Savings report, context and quota |
+| `/quota-saver audit` | What every request carries (MCP servers, CLAUDE.md, skills) and how to cut it |
+| `/quota-saver week` · `/quota-saver month` | Savings per day |
 | `/quota-saver on` · `/quota-saver off` | Turn the whole plugin on or off (remembered) |
 | `/local` | Local model status and setup steps |
 | `/local on` · `/local auto` · `/local off` | Sets everything up if needed, then `on`: prompts starting with `~` run locally; `auto`: general questions run locally too |
@@ -87,6 +94,7 @@ In `/config`, under `quota-saver`:
 | `dedupeReads` | `true` | Refuse a repeat read of an unchanged file |
 | `autoIntent` | `true` | Attach the lean task guide |
 | `localCache` | `true` | Serve repeated questions from disk |
+| `guardJunk` | `true` | Refuse whole reads of dependency/build folders, lock files, minified bundles |
 | `ollamaUrl` | `http://localhost:11434` | Local model server |
 | `setupLocalModel` | `ask` | `yes` / `ask` / `no`: what to do about the local model on the first session |
 

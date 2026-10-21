@@ -3,7 +3,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import { formatK, tokens } from '../lib/trim'
-import { record } from '../core/activity'
+import { clock, record } from '../core/activity'
 import { state } from '../core/state'
 
 export async function refreshStatus($: EngineInterface) {
@@ -20,6 +20,19 @@ export async function refreshStatus($: EngineInterface) {
   const saved = tokens(session.savedChars)
   if (saved > 0) parts.push(`saved ~${formatK(saved)} tok`)
   $.ui.status(parts.join(' · '))
+
+  for (const r of rateLimits) {
+    const level = r.percentUsed >= 95 ? 95 : r.percentUsed >= 80 ? 80 : 0
+    const key = `${r.kind}:${r.resetsAt ?? ''}:${level}`
+    if (level === 0 || state.quotaWarned.has(key)) continue
+    state.quotaWarned.add(key)
+    const window = r.kind === 'five_hour' ? '5-hour' : r.kind === 'seven_day' ? 'weekly' : r.kind
+    const resets = r.resetsAt ? ` It resets at ${clock(Date.parse(r.resetsAt))}.` : ''
+    await record($, 'info', `${window} quota ${r.percentUsed}% used`)
+    $.ui.toast(
+      `${window} quota ${r.percentUsed}% used.${resets} For easy tasks: /model haiku, and /local auto for general questions.`,
+    )
+  }
 
   const pct = context.percent ?? 0
   const level = pct >= 85 ? 85 : pct >= 65 ? 65 : 0

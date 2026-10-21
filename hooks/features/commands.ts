@@ -7,7 +7,8 @@ import { parseEntry } from '../lib/memory'
 import type { Dictionary } from '../lib/memory'
 import { formatK, tokens } from '../lib/trim'
 import { record } from '../core/activity'
-import { lifetime, saveSettings, state, STORE } from '../core/state'
+import { daily, dayOf, EMPTY_STATS, lifetime, saveSettings, state, STORE } from '../core/state'
+import { audit, formatAudit } from './audit'
 import type { Options } from '../core/state'
 import { ensureLocal, hasModel, setup } from './local-setup'
 import type { SetupOutcome } from './local-setup'
@@ -23,7 +24,7 @@ const LOCAL_OUTCOME: Record<SetupOutcome, (model: string, how: string, url: stri
 }
 
 export const COMMANDS = [
-  { name: 'quota-saver', description: 'Token savings report; /quota-saver on or off switches the whole plugin', argumentHint: '[on | off]' },
+  { name: 'quota-saver', description: 'Token savings report; /quota-saver on or off switches the whole plugin', argumentHint: '[on | off | audit | week | month]' },
   { name: 'local', description: 'Local model (Ollama): /local on, /local auto, /local off, /local model <name>', argumentHint: '[on | auto | off | model <name>]' },
   { name: 'yaad', description: 'Your shortcuts: /yaad dp = deploy to staging. Then type just "dp" or "#dp"', argumentHint: '[name = meaning]' },
   { name: 'bhool', description: 'Forget a shortcut, or clear the saved-answer cache', argumentHint: '[name | cache]' },
@@ -48,6 +49,23 @@ export function installCommands(on: On, opts: Options) {
       return { text: cfg.isEnabled ? 'Quota Saver is on.' : 'Quota Saver is off: everything works as plain Claude. Turn it back on with /quota-saver on' }
     }
 
+    if (arg === 'audit') return { text: formatAudit(await audit($)) }
+    if (arg === 'week' || arg === 'month') {
+      const days = arg === 'week' ? 7 : 30
+      const book = await daily($)
+      const now = await $.clock.now()
+      const rows: string[] = []
+      let total = 0
+      for (let i = days - 1; i >= 0; i--) {
+        const day = dayOf(now - i * 86_400_000)
+        const s = { ...EMPTY_STATS, ...book[day] }
+        const saved = tokens(s.savedChars)
+        total += saved
+        rows.push(`  ${day}  ${formatK(saved).padStart(7)} tok  ${String(s.trims).padStart(3)} trims  ${String(s.blockedReads).padStart(3)} reads  ${String(s.cacheHits + s.localAnswers).padStart(3)} free answers`)
+      }
+      return { text: [`Quota Saver: last ${days} days`, '', ...rows, '', `  Total saved ≈ ${formatK(total)} tokens (output trimming; blocked reads and free answers come on top)`].join('\n') }
+    }
+
     const life = await lifetime($)
     const { context, rateLimits, cost } = await $.session.usage()
     const label = (kind: string) => (kind === 'five_hour' ? '5-hour' : kind === 'seven_day' ? '7-day' : kind)
@@ -66,6 +84,7 @@ export function installCommands(on: On, opts: Options) {
       '',
       'Nothing to remember: write normally, the plugin works out the rest.',
       'New task? /naya-kaam · Back tomorrow? /wapas · Shortcuts? /yaad · Local model? /local',
+      'Reports: /quota-saver week · /quota-saver audit (what every request carries) · /activity on (watch it live)',
       'Off/on: /quota-saver off · /quota-saver on',
     ]
     return { text: lines.join('\n') }

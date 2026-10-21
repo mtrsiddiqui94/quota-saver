@@ -3,6 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { detectIntent } from '../hooks/lib/intent'
 import { cacheKey, expand, lookup, normalize, parseEntry, remember } from '../hooks/lib/memory'
 import { hasModel } from '../hooks/features/local-setup'
+import { junkReason } from '../hooks/lib/junk'
 import { routeLocal } from '../hooks/lib/local'
 import { trimOutput } from '../hooks/lib/trim'
 
@@ -63,4 +64,14 @@ test('model names match with or without a tag', async () => {
   expect(hasModel(['qwen2.5:3b'], 'qwen2.5:3b')).toBe(true)
   expect(hasModel(['llama3.2:latest'], 'llama3.2')).toBe(true)
   expect(hasModel(['qwen2.5:1.5b'], 'qwen2.5:3b')).toBe(false)
+})
+
+test('junk paths are told apart from source', async () => {
+  expect(junkReason('/p/node_modules/x/index.js')).toBe('dependency or build folder')
+  expect(junkReason('C:\\p\\dist\\main.js')).toBe('dependency or build folder')
+  expect(junkReason('/p/yarn.lock')).toBe('lock file')
+  expect(junkReason('/p/static/app.min.js')).toBe('minified or generated file')
+  expect(junkReason('/p/src/build.ts')).toBeUndefined()
+  expect(junkReason('/p/src/distance.ts')).toBeUndefined()
+  expect(junkReason('/p/src/index.ts')).toBeUndefined()
 })

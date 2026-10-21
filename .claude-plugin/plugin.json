@@ -1,6 +1,6 @@
 {
   "name": "quota-saver",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Makes your Claude Code quota last longer. English + Roman Urdu.",
   "author": {
     "name": "mtrsiddiqui94"
@@ -52,6 +52,12 @@
       "title": "Ollama URL",
       "description": "Address of the local model server (for /local).",
       "default": "http://localhost:11434"
+    },
+    "guardJunk": {
+      "type": "boolean",
+      "title": "Guard junk files",
+      "description": "Stop whole reads of dependency and build folders, lock files and minified bundles (a retry goes through).",
+      "default": true
     }
   },
   "types": "./types/index.d.ts"

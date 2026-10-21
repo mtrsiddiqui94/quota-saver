@@ -22,6 +22,8 @@ type World = {
   host?: (argv: readonly string[]) => { exitCode: number; stdout?: string } | undefined
   /** What the person picks in a question dialog. */
   answer?: string
+  /** What $.session.usage reports: rate limits, and a context breakdown when asked for one. */
+  usage?: { rateLimits?: { kind: string; percentUsed: number; resetsAt?: string }[]; breakdown?: unknown }
 }
 
 /** An Ollama that has `models` pulled and answers chat with `reply` (or fails with `chatStatus`). */
@@ -55,7 +57,13 @@ function world(on: On, w: World = {}) {
   })
 
   on('session.cwd', () => ({ value: CWD }))
-  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200000, tokens: 50000, percent: 25 }, rateLimits: [] } }))
+  on('session.usage', ($, e) => ({
+    value: {
+      startedAt: 0,
+      context: { window: 200000, tokens: 50000, percent: 25, ...(e.breakdown && w.usage?.breakdown ? { breakdown: w.usage.breakdown } : {}) },
+      rateLimits: w.usage?.rateLimits ?? [],
+    } as never,
+  }))
   on('fs.stat', ($, e) => {
     const f = w.files?.[e.path]
     if (!f) return { deny: 'ENOENT' }
@@ -435,5 +443,110 @@ describe('activity', () => {
     const list = await run($, 'activity', 'text')
     expect(list.text).toContain('answered from the local cache')
     expect(list.text).toContain('whole read of big.json stopped')
+  })
+})
+
+describe('junk guard', () => {
+  test('a dependency file is refused once with the reason, then allowed', async ($, on) => {
+    const { seen } = world(on, { files: { '/work/app/node_modules/react/index.js': { size: 40_000, mtimeMs: 1 } } })
+    const first = await $.tool.call({ tool: 'Read', file_path: '/work/app/node_modules/react/index.js' })
+    expect(first.deny).toContain('dependency or build folder')
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/node_modules/react/index.js' })
+    expect(seen.reads).toBe(1)
+  })
+
+  test('lock files and minified bundles are refused; small ones and line ranges pass', async ($, on) => {
+    const { seen } = world(on, {
+      files: {
+        '/work/app/package-lock.json': { size: 900_000, mtimeMs: 1 },
+        '/work/app/public/app.min.js': { size: 60_000, mtimeMs: 1 },
+        '/work/app/dist/tiny.js': { size: 500, mtimeMs: 1 },
+      },
+    })
+    expect((await $.tool.call({ tool: 'Read', file_path: '/work/app/package-lock.json' })).deny).toContain('lock file')
+    expect((await $.tool.call({ tool: 'Read', file_path: '/work/app/public/app.min.js' })).deny).toContain('minified')
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/dist/tiny.js' })
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/public/app.min.js', offset: 1, limit: 20 })
+    expect(seen.reads).toBe(2)
+  })
+
+  test('guardJunk off lets them through', { options: { guardJunk: false } }, async ($, on) => {
+    const { seen } = world(on, { files: { '/work/app/node_modules/react/index.js': { size: 40_000, mtimeMs: 1 } } })
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/node_modules/react/index.js' })
+    expect(seen.reads).toBe(1)
+  })
+})
+
+const BREAKDOWN = {
+  categories: [],
+  totalTokens: 60_000,
+  maxTokens: 200_000,
+  rawMaxTokens: 200_000,
+  autocompactSource: 'model',
+  percentage: 30,
+  gridRows: [],
+  model: 'claude-sonnet-5-5',
+  memoryFiles: [{ path: '/work/app/CLAUDE.md', type: 'Project', tokens: 6_200 }],
+  mcpTools: [
+    { name: 'mcp__github__a', serverName: 'github', tokens: 2_500, isLoaded: true },
+    { name: 'mcp__github__b', serverName: 'github', tokens: 2_000, isLoaded: true },
+    { name: 'mcp__jira__x', serverName: 'jira', tokens: 9_000, isLoaded: false },
+  ],
+  agents: [],
+  isAutoCompactEnabled: true,
+  apiUsage: null,
+}
+
+describe('audit and reports', () => {
+  test('/quota-saver audit names the heavy MCP server and CLAUDE.md, ignoring unloaded tools', async ($, on) => {
+    world(on, { usage: { breakdown: BREAKDOWN } })
+    const res = await run($, 'quota-saver', 'audit')
+    expect(res.text).toContain('MCP server "github" adds 4.5k tokens')
+    expect(res.text).not.toContain('jira')
+    expect(res.text).toContain('CLAUDE.md is 6.2k tokens')
+    expect(res.text).toContain('Total fixed cost')
+  })
+
+  test('/quota-saver week shows what was saved today', async ($, on) => {
+    world(on)
+    await $.session.append(toolResultRow('Bash', LONG_LOG))
+    const res = await run($, 'quota-saver', 'week')
+    expect(res.text).toContain('last 7 days')
+    expect(res.text).toMatch(/1970-01-01\s+\d/)
+    expect(res.text).toContain('1 trims')
+  })
+})
+
+describe('alarms', () => {
+  const usage = (model: string, cached: number) => ({ input_tokens: 500, output_tokens: 100, cache_read_input_tokens: cached, cache_creation_input_tokens: 0, model })
+
+  test('a model switch on a big context is called out', async ($, on) => {
+    world(on)
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'activity', 'on')
+    await $.turn.complete({ ...turnEnd('a'), usage: usage('claude-opus-5-5', 40_000) })
+    await $.turn.complete({ ...turnEnd('b'), usage: usage('claude-haiku-5-5', 0) })
+    const list = await run($, 'activity', 'text')
+    expect(list.text).toContain('model changed claude-opus-5-5 → claude-haiku-5-5')
+    expect(list.text).toContain('turn done')
+  })
+
+  test('the same model never warns', async ($, on) => {
+    world(on)
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'activity', 'on')
+    await $.turn.complete({ ...turnEnd('a'), usage: usage('claude-opus-5-5', 40_000) })
+    await $.turn.complete({ ...turnEnd('b'), usage: usage('claude-opus-5-5', 41_000) })
+    expect((await run($, 'activity', 'text')).text).not.toContain('model changed')
+  })
+
+  test('quota at 85% raises one alarm per window', async ($, on) => {
+    world(on, { usage: { rateLimits: [{ kind: 'five_hour', percentUsed: 85, resetsAt: '2026-10-21T12:00:00Z' }] } })
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'activity', 'on')
+    await $.turn.complete(turnEnd('a'))
+    await $.turn.complete(turnEnd('b'))
+    const text = (await run($, 'activity', 'text')).text ?? ''
+    expect(text.split('5-hour quota 85% used').length - 1).toBe(1)
   })
 })

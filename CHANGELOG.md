@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-10-21
+
+### Added
+- Junk guard: whole reads of dependency and build folders (`node_modules`,
+  `dist`, `build`, `.next`, `target`, `__pycache__`, …), lock files and
+  minified or generated files are refused once with the reason. Setting
+  `guardJunk`.
+- `/quota-saver audit`: the fixed cost of every request (loaded MCP tool
+  schemas per server, memory files, skills, agents) with concrete cuts. It also
+  runs once per context by itself and speaks up only when something is heavy.
+  Measured locally, so the audit costs nothing.
+- Quota alarm at 80% and 95% of the 5-hour and weekly limits, once per window.
+- Model-switch warning: says how many tokens a prompt-cache restart re-sent.
+- `/quota-saver week` and `/quota-saver month`: savings per day.
+
 ## [0.8.1] - 2026-10-21
 
 ### Fixed

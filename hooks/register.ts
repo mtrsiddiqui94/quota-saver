@@ -7,6 +7,8 @@ import { k, record } from './core/activity'
 import { loadSettings, parseOptions, state } from './core/state'
 import { COMMANDS, installCommands } from './features/commands'
 import { installActivity } from './features/activity'
+import { auditOnce } from './features/audit'
+import { warnModelSwitch } from './features/model-switch'
 import { installHandoff } from './features/handoff'
 import { autostartLocal } from './features/local-setup'
 import { refreshStatus } from './features/meter'
@@ -35,6 +37,10 @@ export const register: Register = (on, options) => {
     if (e.agentId === undefined) {
       await rememberAnswer($, e).catch(() => undefined)
       await refreshStatus($).catch(() => undefined)
+      if (state.cfg.isEnabled) {
+        await warnModelSwitch($, e.usage).catch(() => undefined)
+        await auditOnce($).catch(() => undefined)
+      }
     }
     return done
   })

@@ -12,6 +12,7 @@ export const STORE = {
   dictionary: 'dictionary',
   answers: 'answers',
   settings: 'settings',
+  daily: 'daily',
 } as const
 
 export type Options = {
@@ -22,6 +23,7 @@ export type Options = {
   localCache: boolean
   ollamaUrl: string
   setupLocalModel: 'yes' | 'ask' | 'no'
+  guardJunk: boolean
 }
 
 export function parseOptions(options: PluginOptions): Options {
@@ -32,6 +34,7 @@ export function parseOptions(options: PluginOptions): Options {
     autoIntent: options.autoIntent !== false,
     localCache: options.localCache !== false,
     ollamaUrl: String(options.ollamaUrl ?? 'http://localhost:11434'),
+    guardJunk: options.guardJunk !== false,
     setupLocalModel: options.setupLocalModel === 'yes' || options.setupLocalModel === 'no' ? options.setupLocalModel : 'ask',
   }
 }
@@ -58,6 +61,12 @@ export const state = {
   warnedAt: 0,
   /** A handoff note waiting for the next /clear, and the one in force now. */
   handoff: {} as { pending?: string; active?: string },
+  /** Whether this context window's fixed cost was audited yet. */
+  isAudited: false,
+  /** The main loop's model on its last turn, and the context it carried then. */
+  lastTurn: undefined as { model: string; contextTokens: number } | undefined,
+  /** Quota alarms already raised, as `<window>:<level>`, so each sounds once per reset. */
+  quotaWarned: new Set<string>(),
   /** The answer-cache key of the running turn, and whether it changed anything. */
   turn: { hasSideEffects: false } as { key?: string; hasSideEffects: boolean },
 }
@@ -67,14 +76,42 @@ export function resetContext() {
   state.seen.clear()
   state.refused.clear()
   state.warnedAt = 0
+  state.isAudited = false
+  state.lastTurn = undefined
 }
 
-export async function count($: EngineInterface, delta: Partial<Stats>) {
-  for (const [k, v] of Object.entries(delta) as [keyof Stats, number][]) state.session[k] += v
-  const old = { ...ZERO, ...(((await $.store.get(STORE.lifetime)) ?? {}) as Partial<Stats>) }
-  for (const [k, v] of Object.entries(delta) as [keyof Stats, number][]) old[k] += v
-  await $.store.set(STORE.lifetime, old)
+export type Daily = Record<string, Stats>
+
+/** The local calendar day of a timestamp, as YYYY-MM-DD. */
+export function dayOf(at: number): string {
+  const d = new Date(at)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+const DAYS_KEPT = 60
+
+export async function count($: EngineInterface, delta: Partial<Stats>) {
+  const add = (into: Stats) => {
+    for (const [k, v] of Object.entries(delta) as [keyof Stats, number][]) into[k] += v
+  }
+  add(state.session)
+  const old = { ...ZERO, ...(((await $.store.get(STORE.lifetime)) ?? {}) as Partial<Stats>) }
+  add(old)
+  await $.store.set(STORE.lifetime, old)
+
+  const today = dayOf(await $.clock.now())
+  const daily = ((await $.store.get(STORE.daily)) ?? {}) as Daily
+  const day = { ...ZERO, ...daily[today] }
+  add(day)
+  const kept = Object.fromEntries(Object.entries({ ...daily, [today]: day }).sort(([a], [b]) => a.localeCompare(b)).slice(-DAYS_KEPT))
+  await $.store.set(STORE.daily, kept)
+}
+
+export async function daily($: EngineInterface): Promise<Daily> {
+  return ((await $.store.get(STORE.daily)) ?? {}) as Daily
+}
+
+export const EMPTY_STATS: Stats = ZERO
 
 export async function lifetime($: EngineInterface): Promise<Stats> {
   return { ...ZERO, ...(((await $.store.get(STORE.lifetime)) ?? {}) as Partial<Stats>) }
