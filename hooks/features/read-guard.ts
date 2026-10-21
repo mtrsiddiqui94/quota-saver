@@ -9,6 +9,8 @@ import { record } from '../core/activity'
 import { count, state } from '../core/state'
 import type { Options } from '../core/state'
 
+const WHOLE_READ_BYTES = 32 * 1024
+
 export function installReadGuard(on: On, opts: Options) {
   on('tool.call', { tool: 'Read' }, async ($, e, next) => {
     if (!state.cfg.isEnabled) return next(e)
@@ -22,7 +24,11 @@ export function installReadGuard(on: On, opts: Options) {
     const size = stat?.kind === 'file' ? stat.size : 0
 
     if (!state.refused.has(key) && mtime >= 0) {
-      const isRepeat = opts.dedupeReads && state.seen.get(key) === mtime
+      // A range of a file already read whole is a repeat too. Only for files small
+      // enough that the whole read could not have stopped at Read's 2000-line cap.
+      const wholeKey = `${path}|||`
+      const isPartOfWhole = isRanged && e.pages === undefined && size <= WHOLE_READ_BYTES && state.seen.get(wholeKey) === mtime
+      const isRepeat = opts.dedupeReads && (state.seen.get(key) === mtime || isPartOfWhole)
       const isHuge = !isRanged && !e.allow_large && !isBinaryLike(path) && size > opts.maxReadBytes
       const junk = opts.guardJunk && !isRanged && size > 2048 ? junkReason(path) : undefined
       if (isRepeat || isHuge || junk) {

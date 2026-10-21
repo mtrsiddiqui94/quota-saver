@@ -233,6 +233,15 @@ describe('read guard', () => {
     expect(seen.reads).toBe(2)
   })
 
+  test('a range of a file already read whole is refused once', async ($, on) => {
+    const { seen } = world(on, { files: { '/work/app/a.ts': { size: 100, mtimeMs: 1 } } })
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/a.ts' })
+    const part = await $.tool.call({ tool: 'Read', file_path: '/work/app/a.ts', offset: 10, limit: 5 })
+    expect(part.deny).toContain('already read')
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/a.ts', offset: 10, limit: 5 })
+    expect(seen.reads).toBe(2)
+  })
+
   test('dedupeReads off reads every time', { options: { dedupeReads: false } }, async ($, on) => {
     const { seen } = world(on, { files: { '/work/app/a.ts': { size: 100, mtimeMs: 1 } } })
     await $.tool.call({ tool: 'Read', file_path: '/work/app/a.ts' })
@@ -588,7 +597,7 @@ describe('used vs without the plugin', () => {
     const text = (await run($, 'activity', 'text')).text ?? ''
     expect(text).toMatch(/this message cost 41\.5k tokens .* · Quota Saver saved [\d.]+k \(\d+%\): without it, [\d.]+k/)
     const report = (await run($, 'quota-saver', '')).text ?? ''
-    expect(report).toContain('Tokens, this session: Claude used 41.5k tokens · without Quota Saver ≈')
+    expect(report).toContain('Tokens, this session: Claude used 41.5k tokens (1.5k at full price, the rest cheap cache reads) · without Quota Saver ≈')
   })
 
   test('a refused read that is retried counts as nothing saved', async ($, on) => {

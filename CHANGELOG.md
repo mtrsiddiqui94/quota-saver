@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.18.1] - 2026-10-21
+
+### Changed
+- A range of a file already read whole, and unchanged since, is refused once as a repeat read (files up to 32 KB, so the whole read was not cut off at 2000 lines).
+- The session token line in `/quota-saver` says how much was billed at full price, so a total made mostly of cheap cache reads is not mistaken for a large cost.
+- The output diet drops per-layer and per-package chatter of docker, pip, cargo, git clone/pull and gradle downloads, for any command.
+
+### Added
+- When a session starts, one line on what the last session cost (and how much of it at full price) and saved.
+
 ## [0.18.0] - 2026-10-21
 
 ### Added

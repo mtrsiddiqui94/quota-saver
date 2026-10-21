@@ -19,6 +19,7 @@ import { installOutputDiet, pruneArchive } from './features/output-diet'
 import { installPromptRouter, rememberAnswer } from './features/prompt-router'
 import { installReadGuard } from './features/read-guard'
 import { EXPLORER, installRules } from './features/rules'
+import { mentionLastSession } from './features/session-report'
 
 export const register: Register = (on, options) => {
   const opts = parseOptions(options)
@@ -31,6 +32,7 @@ export const register: Register = (on, options) => {
     await autostartLocal($, opts).catch(() => undefined)
     await pruneArchive($).catch(() => undefined)
     await mentionNote($).catch(() => undefined)
+    await mentionLastSession($).catch(() => undefined)
     return next(e)
   })
 

@@ -15,6 +15,7 @@ export const STORE = {
   daily: 'daily',
   projectNotes: 'projectNotes',
   words: 'words',
+  lastSession: 'lastSession',
 } as const
 
 export type Options = {
@@ -55,9 +56,11 @@ export type Stats = {
   usedTokens: number
   /** Estimated tokens the same work would have taken without the plugin. */
   baselineTokens: number
+  /** Of usedTokens, the part billed at full price (all but cache reads). */
+  fullPriceTokens: number
 }
 
-const ZERO: Stats = { savedChars: 0, trims: 0, blockedReads: 0, cacheHits: 0, localAnswers: 0, usedTokens: 0, baselineTokens: 0 }
+const ZERO: Stats = { savedChars: 0, trims: 0, blockedReads: 0, cacheHits: 0, localAnswers: 0, usedTokens: 0, baselineTokens: 0, fullPriceTokens: 0 }
 
 // Per-process state. A hot reload starts it over, which only resets counters.
 export const state = {

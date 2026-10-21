@@ -7,6 +7,7 @@ import { record } from '../core/activity'
 import { resetContext, state, STORE } from '../core/state'
 import type { Options } from '../core/state'
 import { judgeReply } from '../lib/judge'
+import { saveLastSession } from './session-report'
 import { askLocal } from '../lib/local'
 
 const HANDOFF_SYSTEM = `You compress a coding session into a handoff note so a fresh session can continue with almost no context.
@@ -148,7 +149,8 @@ export function installHandoff(on: On, opts: Options) {
     return done
   }).catch(($, e, next) => next(e))
 
-  on('session.end', ($, e, next) => {
+  on('session.end', async ($, e, next) => {
+    await saveLastSession($).catch(() => undefined)
     resetContext()
     state.handoff.active = e.reason === 'clear' ? state.handoff.pending : undefined
     state.handoff.pending = undefined

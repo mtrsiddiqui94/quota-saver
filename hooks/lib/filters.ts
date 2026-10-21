@@ -21,6 +21,18 @@ export function commandKind(command: string): CommandKind {
 const PASSING = /^\s*(✓|✔|√|PASS\b|ok\s+\d|ok\s+-|test .+ \.\.\. ok$|.+ PASSED\b|\[\s*PASS\s*\]|●\s*passed)/
 // Progress bars, spinners and download chatter.
 const NOISE = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|\[[#=>.\- ]{6,}\]|\b\d{1,3}%\s*(\||complete|done)?|^\s*(Downloading|Downloaded|Fetching|Resolving|Collecting|Using cached|Requirement already satisfied|Progress:|reify:|idealTree|timing|http fetch|Installing [\w@/.-]+ \(|Analyzing dependencies|Generating Pods project|CompileC |CompileSwift |Ld |CpResource |ProcessInfoPlistFile |Transforming|Bundling .*\d+\.\d+%)|^> Task :\S+( (UP-TO-DATE|NO-SOURCE|SKIPPED|FROM-CACHE))?\s*$/i
+// Per-package and per-layer chatter of docker, pip, cargo, git and gradle.
+const CHATTER = [
+  /^\s*[0-9a-f]{12}: (Pulling fs layer|Waiting|Downloading|Verifying Checksum|Download complete|Extracting|Pull complete|Already exists)/,
+  /^#\d+ (sha256:|\[internal\]|DONE \d|CACHED|extracting|resolve )/,
+  /^\s*=> (CACHED|\[internal\])/,
+  /^\s*(Building wheel for|Created wheel for|Stored in directory:|Preparing metadata|Getting requirements to build|Installing build dependencies|Found existing installation:|Uninstalling \S+:|Successfully uninstalled|Attempting uninstall:)/,
+  /^\s+(Compiling|Checking|Fresh|Locking|Adding|Downloaded|Unpacking) \S+ v\d/,
+  /^\s+Updating crates\.io index\s*$/,
+  /^(remote: )?(Enumerating|Counting|Compressing|Receiving|Resolving|Unpacking) (objects|deltas)/,
+  /^Download(ing)? https?:\/\/\S+\s*$/,
+]
+const isChatter = (line: string) => CHATTER.some(re => re.test(line))
 
 /** Collapses runs of the same line into one, with a count. */
 export function collapseRepeats(lines: readonly string[]): string[] {
@@ -52,7 +64,7 @@ export function filterOutput(command: string, text: string): Filtered | undefine
   const lines = text.replace(/\r(?!\n)/g, '\n').split('\n')
   const keep = lines.filter(line => {
     if (ERROR.test(line)) return true
-    if (NOISE.test(line)) return false
+    if (NOISE.test(line) || isChatter(line)) return false
     if (kind === 'test' && PASSING.test(line)) return false
     return true
   })

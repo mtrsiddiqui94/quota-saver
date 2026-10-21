@@ -40,13 +40,16 @@ export const COMMANDS = [
 ] as const
 
 function compareLines(session: Stats, life: Stats): string[] {
-  const line = (label: string, s: Stats) => {
+  const line = (label: string, s: Stats, showsPrice: boolean) => {
     if (s.baselineTokens === 0) return undefined
     const saved = s.baselineTokens - s.usedTokens
     const pct = Math.round((saved / s.baselineTokens) * 100)
-    return `${label} Claude used ${formatK(s.usedTokens)} tokens · without Quota Saver ≈ ${formatK(s.baselineTokens)} · saved ≈ ${formatK(saved)} (${pct}%)`
+    // Most of a large total is usually cheap cache reads; say how much was billed in full.
+    const price = showsPrice && s.fullPriceTokens > 0 ? ` (${formatK(s.fullPriceTokens)} at full price, the rest cheap cache reads)` : ''
+    return `${label} Claude used ${formatK(s.usedTokens)} tokens${price} · without Quota Saver ≈ ${formatK(s.baselineTokens)} · saved ≈ ${formatK(saved)} (${pct}%)`
   }
-  return [line('Tokens, this session:', session), line('Tokens, all time:    ', life)].filter((x): x is string => x !== undefined)
+  // Lifetime totals from before 0.18.1 have no full-price count, so only the session shows it.
+  return [line('Tokens, this session:', session, true), line('Tokens, all time:    ', life, false)].filter((x): x is string => x !== undefined)
 }
 
 async function getDictionary($: EngineInterface): Promise<Dictionary> {

@@ -14,6 +14,8 @@ import { routeLocal } from '../hooks/lib/local'
 import { language, replaceWords, useLearned, userWords } from '../hooks/lib/prompt'
 import { learnedWords, learnWords } from '../hooks/lib/learn'
 import { trimOutput } from '../hooks/lib/trim'
+import { reportLine, sessionReport } from '../hooks/features/session-report'
+import { EMPTY_STATS } from '../hooks/core/state'
 
 test('long output keeps head, tail and error lines', async () => {
   const lines = Array.from({ length: 2000 }, (_, i) => (i === 900 ? 'Error: boom at x.ts:9' : `ok line ${i}`))
@@ -159,6 +161,17 @@ test('filters drop noise and passing tests, never errors', async () => {
   expect(filterOutput('ls', 'one\ntwo')).toBeUndefined()
 })
 
+test('docker, pip, cargo and git chatter is dropped, results and errors kept', async () => {
+  const docker = ['a1b2c3d4e5f6: Pulling fs layer', 'a1b2c3d4e5f6: Pull complete', '#5 CACHED', ' => CACHED [2/5] COPY . .', 'Successfully built 9f8e7d'].join('\n')
+  expect(filterOutput('docker build .', docker)?.text).toBe('Successfully built 9f8e7d')
+  const pip = ['Building wheel for x (pyproject.toml)', 'Stored in directory: /tmp/w', 'Successfully installed x-1.0'].join('\n')
+  expect(filterOutput('pip install x', pip)?.text).toBe('Successfully installed x-1.0')
+  const cargo = ['   Compiling serde v1.0.200', '    Checking app v0.1.0', 'error[E0308]: mismatched types', '    Finished dev profile'].join('\n')
+  expect(filterOutput('cargo check', cargo)?.text).toBe('error[E0308]: mismatched types\n    Finished dev profile')
+  const git = ['remote: Enumerating objects: 12, done.', 'Receiving objects: 100% (12/12)', 'Updating 1a2b..3c4d', 'Fast-forward'].join('\n')
+  expect(filterOutput('git pull', git)?.text).toBe('Updating 1a2b..3c4d\nFast-forward')
+})
+
 const TS_FILE = [
   "import x from 'y'",
   'export function login(user: User) {',
@@ -258,4 +271,13 @@ test('new Roman Urdu words are learned after a few prompts, English ones never',
   useLearned(learnedWords(stats))
   expect(language('jaldi jaldi')).toBe('Roman Urdu')
   useLearned(new Set())
+})
+
+test('the session report counts only what came after the last end', async () => {
+  const before = { ...EMPTY_STATS, usedTokens: 10_000, baselineTokens: 11_000, fullPriceTokens: 1_000 }
+  const now = { ...EMPTY_STATS, usedTokens: 50_000, baselineTokens: 55_000, fullPriceTokens: 4_000 }
+  const r = sessionReport(now, before)
+  expect(r).toEqual({ used: 40_000, baseline: 44_000, fullPrice: 3_000 })
+  expect(reportLine(r!)).toBe('Quota Saver, last session: Claude used 40.0k tokens (3.0k at full price) · saved ≈ 4.0k (9%)')
+  expect(sessionReport(before, before)).toBeUndefined()
 })

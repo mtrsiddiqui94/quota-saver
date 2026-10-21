@@ -23,7 +23,7 @@ export function compareTurn(usage: TurnUsage, keptOutAtStart: number, keptOutAtE
 export async function recordTurnCompare($: EngineInterface, usage: TurnUsage | undefined) {
   if (!usage) return
   const c = compareTurn(usage, state.turn.keptOutAtStart, state.keptOut, state.turn.toolCalls)
-  await count($, { usedTokens: c.used, baselineTokens: c.baseline })
+  await count($, { usedTokens: c.used, baselineTokens: c.baseline, fullPriceTokens: c.fullPrice })
   const pct = c.baseline > 0 ? Math.round((c.saved / c.baseline) * 100) : 0
   await record(
     $,
