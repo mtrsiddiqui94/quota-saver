@@ -256,23 +256,23 @@ describe('switches and dictionary commands', () => {
     expect(seen.prompts[1]?.text).toBe('deploy karo')
   })
 
-  test('/yaad saves, lists and /bhool forgets', async ($, on) => {
+  test('/shortcut saves, lists and /forget forgets', async ($, on) => {
     const { seen } = world(on)
-    const saved = await run($, 'yaad', 'tc = tests chalao aur failures batao')
+    const saved = await run($, 'shortcut', 'tc = tests chalao aur failures batao')
     expect(saved.text).toContain('Saved:')
-    const list = await run($, 'yaad', '')
+    const list = await run($, 'shortcut', '')
     expect(list.text).toContain('tc = tests chalao aur failures batao')
     await submit($, 'tc')
     expect(seen.prompts[0]?.text).toBe('tests chalao aur failures batao')
 
-    await run($, 'bhool', 'tc')
+    await run($, 'forget', 'tc')
     await submit($, 'tc')
     expect(seen.prompts[1]?.text).toBe('tc')
   })
 
-  test('/yaad refuses a malformed entry', async ($, on) => {
+  test('/shortcut refuses a malformed entry', async ($, on) => {
     world(on)
-    const res = await run($, 'yaad', 'no equals sign')
+    const res = await run($, 'shortcut', 'no equals sign')
     expect(res.text).toContain('Format')
   })
 
@@ -283,9 +283,9 @@ describe('switches and dictionary commands', () => {
     expect(res.text).toContain('Context: 25%')
   })
 
-  test('/wapas with nothing saved says so', async ($, on) => {
+  test('/last-task with nothing saved says so', async ($, on) => {
     world(on)
-    const res = await run($, 'wapas', '')
+    const res = await run($, 'last-task', '')
     expect(res.text).toContain('No saved summary')
   })
 })
@@ -379,7 +379,7 @@ describe('rules and handoff', () => {
     expect(offRes.sections.map(s => s.id)).toEqual(['intro'])
   })
 
-  test('/naya-kaam summarises, clears, and the note rides into the next context', async ($, on) => {
+  test('/new-task summarises, clears, and the note rides into the next context', async ($, on) => {
     world(on)
     on('prompt.compose', () => ({ sections: [] }))
     on('session.messages', () => ({ value: [{ role: 'user', text: 'login bana rahe hain', toolUses: [] }] }))
@@ -389,7 +389,7 @@ describe('rules and handoff', () => {
     on('command.run', { command: 'clear' }, () => ({ text: '' }))
     on('session.end', () => ({ sessionId: 's2' }))
 
-    const res = await run($, 'naya-kaam', '')
+    const res = await run($, 'new-task', '')
     expect(res.text).toContain('GOAL: login page')
     // what the engine does on /clear
     await $.session.end({ reason: 'clear', sessionId: 's1', resume: { id: 's1' } })
@@ -397,7 +397,7 @@ describe('rules and handoff', () => {
     const handoff = composed.sections.find(s => s.id === 'quota-saver:handoff')
     expect(handoff?.text).toContain('NEXT: tests')
 
-    const back = await run($, 'wapas', '')
+    const back = await run($, 'last-task', '')
     expect(back.text).toContain('GOAL: login page')
   })
 })
@@ -586,7 +586,7 @@ describe('used vs without the plugin', () => {
     const text = (await run($, 'activity', 'text')).text ?? ''
     expect(text).toMatch(/used 41\.5k tokens · without Quota Saver ≈ [\d.]+k · saved ≈ [\d.]+k \(\d+%\) over 3 requests/)
     const report = (await run($, 'quota-saver', '')).text ?? ''
-    expect(report).toContain('This session: Claude used 41.5k tokens · without Quota Saver ≈')
+    expect(report).toContain('Tokens, this session: Claude used 41.5k tokens · without Quota Saver ≈')
   })
 
   test('a refused read that is retried counts as nothing saved', async ($, on) => {
@@ -636,6 +636,17 @@ describe('editor blocks around the prompt', () => {
     const { seen } = world(on, { store: { answers: { [key]: { answer: 'JWT se.', at: 999_000 } } } })
     const res = await submit($, `${WRAP}\nauth kaise kaam karta hai`)
     expect(res.drop).toContain('JWT se.')
+    expect(seen.prompts.length).toBe(0)
+  })
+})
+
+describe('menu commands', () => {
+  test('the file command runs the plugin command, with its arguments, and no model call', async ($, on) => {
+    const { seen } = world(on)
+    const saved = await run($, 'quota-saver:shortcut', 'tc = run the tests')
+    expect(saved.text).toContain('Saved:')
+    const report = await run($, 'quota-saver:status', '')
+    expect(report.text).toContain('Quota Saver: token savings')
     expect(seen.prompts.length).toBe(0)
   })
 })

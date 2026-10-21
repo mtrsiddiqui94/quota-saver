@@ -54,7 +54,7 @@ export async function audit($: EngineInterface): Promise<Audit | undefined> {
   if (memoryTotal >= MEMORY_HEAVY && !tips.some(t => t.includes('rides on every request'))) {
     tips.push(`Memory files total ${k(memoryTotal)} tokens. Trim CLAUDE.md to the essentials.`)
   }
-  if (b.percentage >= 60) tips.push(`Context is ${b.percentage}% full: /naya-kaam carries a 12-line summary instead of all of it.`)
+  if (b.percentage >= 60) tips.push(`Context is ${b.percentage}% full: /new-task carries a 12-line summary instead of all of it.`)
   return { lines, tips, fixedTokens }
 }
 

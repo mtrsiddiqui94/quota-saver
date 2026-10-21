@@ -1,5 +1,5 @@
 ---
-description: Build a feature or code. Example: /banao a search box on the users list
+description: Build a feature or code. Example: /build a search box on the users list
 argument-hint: [what to build]
 ---
 Build this: $ARGUMENTS

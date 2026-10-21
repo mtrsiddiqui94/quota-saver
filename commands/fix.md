@@ -1,5 +1,5 @@
 ---
-description: Fix a bug or error. Example: /theek login returns a 500 error
+description: Fix a bug or error. Example: /fix login returns a 500 error
 argument-hint: [problem or error]
 ---
 Fix this problem: $ARGUMENTS

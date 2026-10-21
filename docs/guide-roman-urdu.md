@@ -13,9 +13,9 @@ Roman Urdu ya English, jaise chahein likhein. Quota Saver tokens wahan bachata h
 | **Model badalne ki warning** | Beech mein model badalne se prompt cache toot jaata hai. Plugin batata hai ke is se kitne tokens poore daam par gaye. |
 | **Read guard** | Bari file poori parhne se rokta hai (pehle search, phir sirf zaroori lines). Jo file pehle parh li aur badli nahi, wo dobara nahi parhi jaati. |
 | **Auto task samajh** | "login ka error theek karo", "ye samjhao", "tests chalao": prompt dekh kar khud mukhtasar hidayat saath bhejta hai. Koi command yaad rakhne ki zaroorat nahi. |
-| **Local dictionary** | `/yaad dp = staging pe deploy karo, pehle tests` save karein, phir sirf `dp` ya jumle mein `#dp` likhein. Expand aapki machine par hota hai. |
+| **Local dictionary** | `/shortcut dp = staging pe deploy karo, pehle tests` save karein, phir sirf `dp` ya jumle mein `#dp` likhein. Expand aapki machine par hota hai. |
 | **Local jawab cache** | Jo sawal pehle pooch chuke hain (aur us waqt koi file nahi badli), us ka jawab local se aata hai: **0 tokens**. Spelling ka farq ("kia ha" / "kya hai") bhi pehchaanta hai. Naya jawab chahiye to shuru mein `!` lagayein. |
-| **Smart handoff** | `/naya-kaam`: sasta model (Haiku) poore session ka 12-line khulasa banata hai, context saaf karta hai, aur khulasa aage le jaata hai. `/wapas` agle din wahi khulasa load karta hai, poori history nahi. |
+| **Smart handoff** | `/new-task`: sasta model (Haiku) poore session ka 12-line khulasa banata hai, context saaf karta hai, aur khulasa aage le jaata hai. `/last-task` agle din wahi khulasa load karta hai, poori history nahi. |
 | **Sasta explorer** | Codebase mein bari talaash `quota-saver:explorer` agent karta hai, jo sasta model (Haiku) use karta hai. |
 | **Context + quota meter** | Status line mein `ctx 42% · 5h 30% · saved ~12k tok` dikhta hai. 65% aur 85% par yaad dilata hai. |
 | **Lean rules** | Claude ko har dafa chhoti hidayat jaati hai: mukhtasar jawab, recap nahi, search pehle. |
@@ -52,12 +52,12 @@ Kamzor PC (GPU ke baghair) par har jawab mein 5-20 second lag sakte hain. Is se 
 | Command | Kaam |
 |---|---|
 | `/quota-saver` | Kitne tokens bache, context aur quota ki halat |
-| `/naya-kaam [agla kaam]` | Khulasa banao aur context saaf karo |
-| `/wapas` | Pichhla khulasa load karo |
-| `/yaad naam = matlab` | Shortcut save karo (`/yaad` akela: list dikhata hai) |
-| `/bhool naam` ya `/bhool cache` | Shortcut ya local cache mitao |
-| `/theek`, `/samjhao`, `/test-chalao`, `/jaanch`, `/banao` | Tayyar lean prompts (auto-detect ki wajah se zaroori nahi) |
-| `/chhota` | Baqi conversation mein bohat mukhtasar jawab |
+| `/new-task [agla kaam]` | Khulasa banao aur context saaf karo |
+| `/last-task` | Pichhla khulasa load karo |
+| `/shortcut naam = matlab` | Shortcut save karo (`/shortcut` akela: list dikhata hai) |
+| `/forget naam` ya `/forget cache` | Shortcut ya local cache mitao |
+| `/fix`, `/explain`, `/run-tests`, `/review-changes`, `/build` | Tayyar lean prompts (auto-detect ki wajah se zaroori nahi) |
+| `/brief` | Baqi conversation mein bohat mukhtasar jawab |
 
 ## Install (Mac, Windows, Linux, VS Code)
 
@@ -91,6 +91,6 @@ Phir `y` dabayein aur scope chunein. VS Code ka Claude Code extension bhi wahi p
 
 ## Zyada bachat ki aadatein
 
-1. Har naye kaam par `/naya-kaam` chalayein. Purani history quota ka sab se bara kharch hai.
+1. Har naye kaam par `/new-task` chalayein. Purani history quota ka sab se bara kharch hai.
 2. Aasaan kaam ke liye `/model sonnet` ya `/model haiku`.
 3. Prompt mein file ka naam de dein: "auth.ts mein login function", taake Claude ko dhoondna na pare.

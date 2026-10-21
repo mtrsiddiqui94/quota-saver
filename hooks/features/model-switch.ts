@@ -17,6 +17,6 @@ export async function warnModelSwitch($: EngineInterface, usage: TurnUsage | und
   if (!last || last.model === usage.model || last.contextTokens < WORTH_MENTIONING) return
   await record($, 'info', `model changed ${last.model} → ${usage.model}: prompt cache restarted, ~${k(last.contextTokens)} tokens re-sent at full price`)
   $.ui.toast(
-    `Model changed to ${usage.model}: its prompt cache starts empty, so ~${k(last.contextTokens)} tokens were sent at full price. Switch models at the start of a task (after /naya-kaam) to avoid this.`,
+    `Model changed to ${usage.model}: its prompt cache starts empty, so ~${k(last.contextTokens)} tokens were sent at full price. Switch models at the start of a task (after /new-task) to avoid this.`,
   )
 }

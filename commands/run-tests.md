@@ -1,5 +1,5 @@
 ---
-description: Run the tests and report only failures. Example: /test-chalao or /test-chalao auth
+description: Run the tests and report only failures. Example: /run-tests or /run-tests auth
 argument-hint: [optional: which tests]
 ---
 Run the project's tests. Scope (optional): $ARGUMENTS

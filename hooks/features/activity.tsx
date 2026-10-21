@@ -4,7 +4,7 @@
 // stops it. Nothing is recorded otherwise.
 
 import { atom, read } from 'claude-code'
-import type { EngineInterface, On } from 'claude-code'
+import type { EngineInterface, Hook, On } from 'claude-code'
 
 import type { ActivityEntry, ActivityKind } from '../../types'
 import { clock, formatEntry, logTarget, record, watch } from '../core/activity'
@@ -64,35 +64,41 @@ async function textView($: EngineInterface, count: number): Promise<string> {
   ].join('\n')
 }
 
+/** What a command answers when its hook fails, in place of failing silently. */
+const FAIL = { text: 'quota-saver: this command failed. Please try again.' }
+
+const activityCommand: Hook<'command.run'> = async ($, e) => {
+  const arg = e.args.trim().toLowerCase()
+  const { follow } = await logTarget($)
+
+  if (arg === 'off') {
+    await record($, 'info', 'recording stopped (/activity off)')
+    watch.isOn = false
+    return { text: 'Activity recording is off. You can close the activity window.' }
+  }
+  if (arg === 'text') return { text: await textView($, 40) }
+
+  // on, or no argument
+  watch.isOn = true
+  await record($, 'info', 'recording started: each prompt you send shows here, step by step')
+  const isWindowOpen = await openTerminal($)
+  const pane = await $.ui.open({ id: PANE, title: 'Quota Saver activity' }).catch(() => ({ isPlaced: false as const }))
+  return {
+    text: [
+      'Activity recording is on.',
+      isWindowOpen
+        ? 'A terminal window opened that shows each step live.'
+        : `Could not open a terminal window. Run this in any terminal (VS Code: Ctrl+\`): ${follow}`,
+      ...(pane.isPlaced ? ['The activity pane is open here too.'] : []),
+      '',
+      'Stop with /activity off. A list here any time: /activity text',
+    ].join('\n'),
+  }
+}
+
 export function installActivity(on: On) {
-  on('command.run', { command: 'activity' }, async ($, e) => {
-    const arg = e.args.trim().toLowerCase()
-    const { follow } = await logTarget($)
-
-    if (arg === 'off') {
-      await record($, 'info', 'recording stopped (/activity off)')
-      watch.isOn = false
-      return { text: 'Activity recording is off. You can close the activity window.' }
-    }
-    if (arg === 'text') return { text: await textView($, 40) }
-
-    // on, or no argument
-    watch.isOn = true
-    await record($, 'info', 'recording started: each prompt you send shows here, step by step')
-    const isWindowOpen = await openTerminal($)
-    const pane = await $.ui.open({ id: PANE, title: 'Quota Saver activity' }).catch(() => ({ isPlaced: false as const }))
-    return {
-      text: [
-        'Activity recording is on.',
-        isWindowOpen
-          ? 'A terminal window opened that shows each step live.'
-          : `Could not open a terminal window. Run this in any terminal (VS Code: Ctrl+\`): ${follow}`,
-        ...(pane.isPlaced ? ['The activity pane is open here too.'] : []),
-        '',
-        'Stop with /activity off. A list here any time: /activity text',
-      ].join('\n'),
-    }
-  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
+  on('command.run', { command: 'activity' }, activityCommand).catch(() => FAIL)
+  on('command.run', { command: 'quota-saver:activity' }, activityCommand).catch(() => FAIL)
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)

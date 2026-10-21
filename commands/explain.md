@@ -1,5 +1,5 @@
 ---
-description: Explain code or a concept, briefly. Example: /samjhao how the auth flow works
+description: Explain code or a concept, briefly. Example: /explain how the auth flow works
 argument-hint: [what to explain]
 ---
 Explain: $ARGUMENTS

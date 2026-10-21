@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] - 2026-10-21
+
+### Changed
+- Command names are English: `/shortcut` (was `/yaad`), `/forget` (`/bhool`),
+  `/new-task` (`/naya-kaam`), `/last-task` (`/wapas`), `/fix` (`/theek`),
+  `/explain` (`/samjhao`), `/run-tests` (`/test-chalao`), `/review-changes`
+  (`/jaanch`), `/build` (`/banao`), `/brief` (`/chhota`). Roman Urdu prompts are
+  still understood.
+
+### Added
+- Every command is also a file command, `quota-saver:<name>`, so it appears in
+  the `/` menu of editors that list only file commands (VS Code). The plugin
+  answers it itself: no model call. `quota-saver:status` is `/quota-saver`.
+
+### Fixed
+- `/quota-saver` printed two "All time" lines.
+
 ## [0.10.1] - 2026-10-21
 
 ### Fixed

@@ -1,5 +1,5 @@
 ---
-description: Review my uncommitted changes (git diff). Example: /jaanch or /jaanch security
+description: Review my uncommitted changes (git diff). Example: /review-changes or /review-changes security
 argument-hint: [optional: focus]
 ---
 Review my current uncommitted changes. Focus: $ARGUMENTS

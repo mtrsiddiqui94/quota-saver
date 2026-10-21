@@ -12,10 +12,10 @@
 | **Junk guard** | Whole reads of `node_modules`, `dist`, `build` and other dependency or build folders, lock files and minified bundles are refused once with the reason. Source files are never affected. |
 | **Read guard** | A whole read of a large file is refused once with a hint to search first. A re-read of an unchanged file is refused once. An identical retry always goes through. |
 | **Auto task detection** | "fix the login error", "ye samjhao", "tests chalao": the plugin recognises the kind of task and attaches a short, lean instruction for it. No commands to remember. |
-| **Personal dictionary** | `/yaad dp = deploy to staging, run tests first`. Then type `dp`, or `#dp` inside a sentence. Expanded locally. |
+| **Personal dictionary** | `/shortcut dp = deploy to staging, run tests first`. Then type `dp`, or `#dp` inside a sentence. Expanded locally. |
 | **Local answer cache** | A question answered before, in a turn that changed nothing, is answered from disk for **0 tokens**. Roman Urdu spelling variants ("kia ha" / "kya hai") count as the same question. Entries expire after 3 days. A leading `!` always asks Claude fresh. |
 | **Local model (Ollama)** | Optional, off by default. General questions run on a model on your machine for **0 Claude tokens**. Project work always goes to Claude. |
-| **Smart handoff** | `/naya-kaam` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/wapas` loads the last note in a new session instead of the whole history. |
+| **Smart handoff** | `/new-task` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/last-task` loads the last note in a new session instead of the whole history. |
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
 | **Audit** | `/quota-saver audit` measures what rides on *every* request before your prompt: MCP tool schemas per server, CLAUDE.md and other memory files, skills and agents, and says what to cut. Runs once by itself per context and speaks up only if something is heavy. |
 | **Quota alarm** | At 80% and 95% of the 5-hour or weekly limit, a notice says when it resets and how to stretch it. |
@@ -61,10 +61,12 @@ claude plugin install quota-saver@quota-saver
 | `/local on` · `/local auto` · `/local off` | Sets everything up if needed, then `on`: prompts starting with `~` run locally; `auto`: general questions run locally too |
 | `/local model <name>` | Choose the Ollama model (default `qwen2.5:1.5b`) |
 | `/activity on` · `/activity off` · `/activity text` | Watch what the plugin does on each prompt in a live terminal window, stop, or list it here |
-| `/yaad name = meaning` · `/yaad` | Save a shortcut, or list them |
-| `/bhool name` · `/bhool cache` | Forget a shortcut, or clear the answer cache |
-| `/naya-kaam [next task]` · `/wapas` | Handoff across `/clear`, or into a new session |
-| `/theek` `/samjhao` `/test-chalao` `/jaanch` `/banao` `/chhota` | Ready-made lean prompts (optional) |
+| `/shortcut name = meaning` · `/shortcut` | Save a shortcut, or list them |
+| `/forget name` · `/forget cache` | Forget a shortcut, or clear the answer cache |
+| `/new-task [next task]` · `/last-task` | Handoff across `/clear`, or into a new session |
+| `/fix` `/explain` `/run-tests` `/review-changes` `/build` `/brief` | Ready-made lean prompts (optional) |
+
+Every command is also in the `/` menu as `quota-saver:<name>` (for example `/quota-saver:status`, `/quota-saver:activity`), so it shows in editors whose menu lists only file commands. Both forms do the same thing, without a model call.
 
 Prefixes: `!` sends a prompt straight to Claude (skips cache and local model). `~` sends it to the local model when `/local` is on.
 

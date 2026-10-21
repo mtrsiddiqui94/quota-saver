@@ -1,7 +1,7 @@
-// /naya-kaam and /wapas: carry a 12-line note across a /clear, or into the next
+// /new-task and /last-task: carry a 12-line note across a /clear, or into the next
 // session, in place of the whole history.
 
-import type { EngineInterface, On } from 'claude-code'
+import type { EngineInterface, Hook, On } from 'claude-code'
 
 import { record } from '../core/activity'
 import { resetContext, state, STORE } from '../core/state'
@@ -37,6 +37,34 @@ async function makeHandoff($: EngineInterface, focus: string): Promise<string | 
   return reply.isAnswered ? reply.text.trim() : undefined
 }
 
+/** What a command answers when its hook fails, in place of failing silently. */
+const FAIL = { text: 'quota-saver: this command failed. Please try again.' }
+
+const newTaskCommand: Hook<'command.run'> = async ($, e) => {
+  const note = await makeHandoff($, e.args.trim())
+  if (!note) return { text: 'Could not write a summary (the session is empty or the model did not answer). Use /clear directly.' }
+
+  await $.store.set(STORE.handoff, { note, at: await $.clock.now() })
+  await record($, 'saved', `session summarised by Haiku into ${note.split('\n').length} lines; context cleared, summary carried forward`)
+  state.handoff.pending = note
+  const isCleared = await $.command.run({ command: 'clear' }).then(
+    () => true,
+    () => false,
+  )
+  return {
+    text: isCleared
+      ? `Context cleared. This summary carries into the new context:\n\n${note}`
+      : `Summary ready:\n\n${note}\n\nNow type /clear: the summary carries into the new context by itself.`,
+  }
+}
+
+const lastTaskCommand: Hook<'command.run'> = async $ => {
+  const saved = (await $.store.get(STORE.handoff)) as { note?: string } | undefined
+  if (!saved?.note) return { text: 'No saved summary. Run /new-task in a session first.' }
+  state.handoff.active = saved.note
+  return { text: `Last summary loaded (instead of the whole history):\n\n${saved.note}` }
+}
+
 export function installHandoff(on: On) {
   on('session.compact', async ($, e, next) => {
     const done = await next(e)
@@ -51,28 +79,9 @@ export function installHandoff(on: On) {
     return next(e)
   })
 
-  on('command.run', { command: 'naya-kaam' }, async ($, e) => {
-    const note = await makeHandoff($, e.args.trim())
-    if (!note) return { text: 'Could not write a summary (the session is empty or the model did not answer). Use /clear directly.' }
+  on('command.run', { command: 'new-task' }, newTaskCommand).catch(() => FAIL)
+  on('command.run', { command: 'quota-saver:new-task' }, newTaskCommand).catch(() => FAIL)
 
-    await $.store.set(STORE.handoff, { note, at: await $.clock.now() })
-    await record($, 'saved', `session summarised by Haiku into ${note.split('\n').length} lines; context cleared, summary carried forward`)
-    state.handoff.pending = note
-    const isCleared = await $.command.run({ command: 'clear' }).then(
-      () => true,
-      () => false,
-    )
-    return {
-      text: isCleared
-        ? `Context cleared. This summary carries into the new context:\n\n${note}`
-        : `Summary ready:\n\n${note}\n\nNow type /clear: the summary carries into the new context by itself.`,
-    }
-  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
-
-  on('command.run', { command: 'wapas' }, async $ => {
-    const saved = (await $.store.get(STORE.handoff)) as { note?: string } | undefined
-    if (!saved?.note) return { text: 'No saved summary. Run /naya-kaam in a session first.' }
-    state.handoff.active = saved.note
-    return { text: `Last summary loaded (instead of the whole history):\n\n${saved.note}` }
-  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
+  on('command.run', { command: 'last-task' }, lastTaskCommand).catch(() => FAIL)
+  on('command.run', { command: 'quota-saver:last-task' }, lastTaskCommand).catch(() => FAIL)
 }

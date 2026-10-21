@@ -38,11 +38,11 @@ export async function refreshStatus($: EngineInterface) {
   const level = pct >= 85 ? 85 : pct >= 65 ? 65 : 0
   if (level > state.warnedAt) {
     state.warnedAt = level
-    await record($, 'info', `context ${pct}% full: every message re-sends it; /naya-kaam would clear it`)
+    await record($, 'info', `context ${pct}% full: every message re-sends it; /new-task would clear it`)
     $.ui.toast(
       level >= 85
-        ? `Context ${pct}% full. Every message now costs more: run /naya-kaam.`
-        : `Context ${pct}%. Switching tasks? /naya-kaam clears it and saves tokens.`,
+        ? `Context ${pct}% full. Every message now costs more: run /new-task.`
+        : `Context ${pct}%. Switching tasks? /new-task clears it and saves tokens.`,
     )
   }
 }
