@@ -1,0 +1,57 @@
+{
+  "name": "quota-saver",
+  "version": "0.5.0",
+  "description": "Makes your Claude Code quota last longer. English + Roman Urdu.",
+  "author": {
+    "name": "mtrsiddiqui94"
+  },
+  "userConfig": {
+    "setupLocalModel": {
+      "type": "string",
+      "title": "Local model (Ollama) setup",
+      "description": "yes: pehle session mein Ollama aur model khud install ho jaayenge, aam sawal free. ask: pehli dafa poochega. no: band (baad mein /local on).",
+      "options": [
+        "yes",
+        "ask",
+        "no"
+      ],
+      "default": "ask"
+    },
+    "maxOutputChars": {
+      "type": "number",
+      "title": "Max tool output (characters)",
+      "description": "Is se lamba Bash/MCP/web output chhota kar diya jaata hai (errors aur aakhri lines rakh kar).",
+      "default": 6000
+    },
+    "maxReadKB": {
+      "type": "number",
+      "title": "Max full-file read (KB)",
+      "description": "Is se bari file poori parhne se pehle Claude ko Grep ya offset/limit use karne ko kaha jaata hai.",
+      "default": 80
+    },
+    "dedupeReads": {
+      "type": "boolean",
+      "title": "Block repeat reads",
+      "description": "Jo file pehle parh li aur badli nahi, use dobara parhne se roko.",
+      "default": true
+    },
+    "autoIntent": {
+      "type": "boolean",
+      "title": "Auto task detection",
+      "description": "Prompt se kaam ki qism (fix, samjhao, test, review, banao) khud pehchaan kar mukhtasar hidayat saath bhejo.",
+      "default": true
+    },
+    "localCache": {
+      "type": "boolean",
+      "title": "Local answer cache",
+      "description": "Pehle pooche gaye sawal ka jawab local se do (0 tokens). '!' se shuru karein to naya jawab.",
+      "default": true
+    },
+    "ollamaUrl": {
+      "type": "string",
+      "title": "Ollama URL",
+      "description": "Local model server ka pata (/local on ke liye).",
+      "default": "http://localhost:11434"
+    }
+  }
+}

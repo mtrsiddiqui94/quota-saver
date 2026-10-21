@@ -1,0 +1,13 @@
+{
+  "name": "quota-saver",
+  "owner": {
+    "name": "mtrsiddiqui94"
+  },
+  "plugins": [
+    {
+      "name": "quota-saver",
+      "source": "./"
+    }
+  ],
+  "description": "Makes your Claude Code quota last longer. English + Roman Urdu."
+}
