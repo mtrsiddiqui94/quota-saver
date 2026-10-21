@@ -8,6 +8,8 @@ Roman Urdu ya English, jaise chahein likhein. Quota Saver tokens wahan bachata h
 |---|---|
 | **Output diet** | Bash, test, build aur web ka lamba output (hazaron lines) shuru, aakhir aur error lines tak chhota kar deta hai, phir hi wo conversation mein jaata hai. Ye output har agle message ke saath dobara nahi jaata. |
 | **Smart output diet** | Test ke output mein pass hone wale tests aur `npm install` ki faltu lines hata deta hai. Error ki lines kabhi nahi hatati. Asal output `~/.quota-saver/raw` mein 3 din tak mehfooz rehta hai, taake Claude command dobara chalaye baghair us ka koi bhi hissa parh sake. |
+| **Milte julte sawal ka cache** | Local model on ho to "docker kya cheez hai" jaisa sawal, jo pehle wale "docker kya hai" ka hi matlab rakhta hai, bhi 0 tokens mein cache se jawab paata hai. Is ke liye 46 MB ka chhota model khud download hota hai. |
+| **App banwana** | React, React Native, Vue, Expo, Gradle, Xcode aur CocoaPods ke lambe build logs aur un ke faltu folders bhi pehchanta hai. Lambe prompt mein bhi task pehchanta hai. |
 | **Outline tool** | Claude poori file parhne ke bajaye pehle us ka naqsha dekhta hai: kaunse functions aur classes kis line par hain. Phir sirf zaroori lines parhta hai. |
 | **Jawab ka style** | `/quota-saver style lite` ya `full`: Claude ke jawab chhote, is liye kam output tokens, jo sab se mehnge hote hain. |
 | **Burn rate** | `/quota-saver` batata hai ke isi raftaar se quota kab khatam hoga aur kab reset hoga. |

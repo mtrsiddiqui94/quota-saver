@@ -5,6 +5,9 @@ const JUNK_DIRS = [
   'node_modules', 'bower_components', 'vendor', 'dist', 'build', 'out', '.next', '.nuxt', '.svelte-kit',
   '.turbo', '.parcel-cache', '.cache', 'coverage', '.nyc_output', 'target', '__pycache__', '.pytest_cache',
   '.mypy_cache', '.tox', '.venv', 'venv', '.gradle', 'Pods', 'DerivedData', '.git',
+  // web and mobile frameworks: Expo, Nuxt/Nitro, Vercel, Angular, Storybook, Yarn, Metro, Android/iOS builds
+  '.expo', '.expo-shared', '.output', '.vercel', '.angular', 'storybook-static', '.yarn', '.metro-cache',
+  '.cxx', 'xcuserdata', 'web-build',
 ]
 
 const JUNK_FILES = new Set([

@@ -12,14 +12,15 @@ export function commandKind(command: string): CommandKind {
   const c = command.toLowerCase()
   if (/\b(jest|vitest|pytest|mocha|ava|tap|phpunit|rspec|go test|cargo test|npm (run )?test|pnpm (run )?test|yarn (run )?test|bun test|dotnet test|mvn test|gradle test|playwright test)\b/.test(c)) return 'test'
   if (/\b(npm (i|install|ci|add)|pnpm (i|install|add)|yarn( install| add)?$|yarn (install|add)|bun (i|install|add)|pip3? install|poetry install|uv (pip )?(install|sync)|cargo (fetch|build)|go mod (download|tidy)|bundle install|composer install|brew install)\b/.test(c)) return 'install'
-  if (/\b(npm run build|pnpm (run )?build|yarn build|tsc|webpack|vite build|next build|cargo build|go build|make|gradle build|mvn (package|install))\b/.test(c)) return 'build'
+  if (/\b(pod install|expo install|npx expo install)\b/.test(c)) return 'install'
+  if (/\b(npm run build|pnpm (run )?build|yarn build|tsc|webpack|vite( build)?|next build|nuxt build|vue-cli-service build|ng build|cargo build|go build|make|gradle(w)?( build| assemble\w*)?|\.\/gradlew|mvn (package|install)|xcodebuild|react-native (run-android|run-ios|bundle)|expo (run|export|prebuild)|eas build)\b/.test(c)) return 'build'
   return 'other'
 }
 
 // A passing test line in the common runners' formats.
 const PASSING = /^\s*(✓|✔|√|PASS\b|ok\s+\d|ok\s+-|test .+ \.\.\. ok$|.+ PASSED\b|\[\s*PASS\s*\]|●\s*passed)/
 // Progress bars, spinners and download chatter.
-const NOISE = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|\[[#=>.\- ]{6,}\]|\b\d{1,3}%\s*(\||complete|done)?|^\s*(Downloading|Downloaded|Fetching|Resolving|Collecting|Using cached|Requirement already satisfied|Progress:|reify:|idealTree|timing|http fetch)/i
+const NOISE = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|\[[#=>.\- ]{6,}\]|\b\d{1,3}%\s*(\||complete|done)?|^\s*(Downloading|Downloaded|Fetching|Resolving|Collecting|Using cached|Requirement already satisfied|Progress:|reify:|idealTree|timing|http fetch|Installing [\w@/.-]+ \(|Analyzing dependencies|Generating Pods project|CompileC |CompileSwift |Ld |CpResource |ProcessInfoPlistFile |Transforming|Bundling .*\d+\.\d+%)|^> Task :\S+( (UP-TO-DATE|NO-SOURCE|SKIPPED|FROM-CACHE))?\s*$/i
 
 /** Collapses runs of the same line into one, with a count. */
 export function collapseRepeats(lines: readonly string[]): string[] {

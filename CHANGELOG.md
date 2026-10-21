@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.16.0] - 2026-10-21
+
+### Added
+- Similar-question cache (after GPTCache): with the local model on, a 46 MB
+  local embedding model (`all-minilm`, fetched with the setup) matches a new
+  question to an earlier one by meaning; at cosine 0.92 or more the saved
+  answer is served, naming the earlier question. Setting `semanticCache`.
+- App builds: React Native, Expo, Gradle, Xcode, CocoaPods and Vite output is
+  recognised (task noise such as `UP-TO-DATE` lines and compile steps is
+  dropped; errors stay), and their folders (`.expo`, `ios/Pods`, `.output`,
+  `.vercel`, `.angular`, Metro caches, ...) are junk.
+
+### Changed
+- A long prompt (a spec, a pasted error) gets its task type from its first
+  1,500 characters instead of none.
+
 ## [0.15.0] - 2026-10-21
 
 More from third-party tools (credit: codebase-index-mcp, Serena, Aider's repo

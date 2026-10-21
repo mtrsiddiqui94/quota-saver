@@ -25,6 +25,7 @@ export type Options = {
   setupLocalModel: 'yes' | 'ask' | 'no'
   guardJunk: boolean
   modelAdvisor: boolean
+  semanticCache: boolean
 }
 
 export function parseOptions(options: PluginOptions): Options {
@@ -37,6 +38,7 @@ export function parseOptions(options: PluginOptions): Options {
     ollamaUrl: String(options.ollamaUrl ?? 'http://localhost:11434'),
     guardJunk: options.guardJunk !== false,
     modelAdvisor: options.modelAdvisor !== false,
+    semanticCache: options.semanticCache !== false,
     setupLocalModel: options.setupLocalModel === 'yes' || options.setupLocalModel === 'no' ? options.setupLocalModel : 'ask',
   }
 }
@@ -84,6 +86,9 @@ export const state = {
   /** The answer-cache key of the running turn, and whether it changed anything. */
   turn: { hasSideEffects: false, toolCalls: 0, keptOutAtStart: 0 } as {
     key?: string
+    /** The typed question and its embedding, kept with the answer for similar-question hits. */
+    question?: string
+    vec?: number[]
     hasSideEffects: boolean
     /** Main-loop tool calls this turn: each is followed by one more request. */
     toolCalls: number

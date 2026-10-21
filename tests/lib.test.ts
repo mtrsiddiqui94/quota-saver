@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { detectIntent } from '../hooks/lib/intent'
-import { cacheKey, expand, lookup, normalize, parseEntry, remember } from '../hooks/lib/memory'
+import { cacheKey, cosine, expand, lookup, nearest, normalize, parseEntry, remember } from '../hooks/lib/memory'
 import { hasModel } from '../hooks/features/local-setup'
 import { compareTurn } from '../hooks/features/compare'
 import { pickTeam, teamOrder } from '../hooks/features/local-team'
@@ -200,4 +200,34 @@ test('burn rate projects time to full from the pace so far', async () => {
   expect(minutesToFull([{ at: 0, pct: 40 }])).toBeUndefined()
   expect(minutesToFull([{ at: 0, pct: 40 }, { at: 60_000, pct: 41 }])).toBeUndefined()
   expect(humanMinutes(135)).toBe('2 h 15 min')
+})
+
+test('nearest finds a similar cached question in the same project only', async () => {
+  expect(Math.round(cosine([1, 0], [1, 0]) * 1000)).toBe(1000)
+  expect(Math.round(cosine([1, 0], [0, 1]) * 1000)).toBe(0)
+  let cache = remember({}, cacheKey('/p', 'docker kya hai'), 'A', 1000, { q: 'docker kya hai', vec: [1, 0, 0] })
+  cache = remember(cache, cacheKey('/other', 'docker kya hai'), 'B', 1000, { vec: [1, 0, 0] })
+  expect(nearest(cache, '/p', [0.99, 0.1, 0], 2000)?.hit.answer).toBe('A')
+  expect(nearest(cache, '/p', [0, 1, 0], 2000)).toBeUndefined()
+  expect(nearest(cache, '/q', [1, 0, 0], 2000)).toBeUndefined()
+})
+
+test('app builds: mobile and web build output and folders are recognised', async () => {
+  expect(commandKind('cd ios && pod install')).toBe('install')
+  expect(commandKind('./gradlew assembleDebug')).toBe('build')
+  expect(commandKind('npx react-native run-android')).toBe('build')
+  expect(commandKind('npx vite build')).toBe('build')
+  const gradle = ['> Task :app:preBuild UP-TO-DATE', '> Task :app:compileDebugKotlin', 'e: MainActivity.kt:12 Unresolved reference: foo', '> Task :app:mergeDebugResources UP-TO-DATE', 'BUILD FAILED in 41s'].join('\n')
+  const g = filterOutput('./gradlew assembleDebug', gradle)
+  expect(g?.text).toContain('Unresolved reference: foo')
+  expect(g?.text).toContain('BUILD FAILED')
+  expect(g?.text).not.toContain('UP-TO-DATE')
+  expect(junkReason('/app/.expo/web/cache/x.json')).toBe('dependency or build folder')
+  expect(junkReason('/app/ios/Pods/React/x.h')).toBe('dependency or build folder')
+  expect(junkReason('/app/src/screens/Home.tsx')).toBeUndefined()
+})
+
+test('a long prompt still gets its task type from its opening', async () => {
+  const spec = 'Build a React Native todo app with offline sync. ' + 'Requirement detail. '.repeat(300)
+  expect(detectIntent(spec)).toBe('build')
 })

@@ -29,7 +29,9 @@ type World = {
 /** An Ollama that has `models` pulled and answers chat with `reply` (or fails with `chatStatus`). */
 function ollamaServer(models: string[], reply = 'Docker ek container tool hai.', chatStatus = 200) {
   return (url: string) =>
-    url.endsWith('/api/tags')
+    url.endsWith('/api/embed')
+      ? { status: 404, text: '' }
+      : url.endsWith('/api/tags')
       ? { status: 200, text: JSON.stringify({ models: models.map(name => ({ name })) }) }
       : chatStatus === 200
         ? { status: 200, text: JSON.stringify({ message: { content: reply } }) }
@@ -654,6 +656,7 @@ describe('menu commands', () => {
 describe('local team', () => {
   /** An Ollama whose answer depends on the model asked. */
   const team = (answers: Record<string, string | number>, seenBodies: string[] = []) => (url: string, body: string) => {
+    if (url.endsWith('/api/embed')) return { status: 404, text: '' }
     if (url.endsWith('/api/tags')) return { status: 200, text: JSON.stringify({ models: Object.keys(answers).map(name => ({ name, size: 1e9 })) }) }
     seenBodies.push(body)
     const model = (JSON.parse(body) as { model: string }).model
@@ -691,6 +694,7 @@ describe('local team', () => {
     let calls = 0
     world(on, {
       ollama: (url, body) => {
+        if (url.endsWith('/api/embed')) return { status: 404, text: '' }
         if (url.endsWith('/api/tags')) return { status: 200, text: JSON.stringify({ models: [{ name: 'gemma3:4b', size: 3e9 }] }) }
         bodies.push(body)
         calls += 1
@@ -863,5 +867,51 @@ describe('outline tool, reply style, burn rate', () => {
     await $.turn.complete(turnEnd('b'))
     const res = await run($, 'quota-saver', '')
     expect(res.text).toContain('5-hour: 50%, full in ~50 min at this pace')
+  })
+})
+
+describe('similar-question cache', () => {
+  // Embeddings by meaning: the two docker questions point the same way, the git one elsewhere.
+  const VEC: Record<string, number[]> = {
+    'docker kya hai': [1, 0, 0],
+    'docker kya cheez hai': [0.98, 0.15, 0],
+    'git rebase kya hai': [0, 1, 0],
+  }
+  const server = (url: string, body: string) => {
+    if (url.endsWith('/api/tags')) return { status: 200, text: JSON.stringify({ models: [{ name: 'qwen2.5:1.5b' }, { name: 'all-minilm' }] }) }
+    if (url.endsWith('/api/embed')) {
+      const input = (JSON.parse(body) as { input: string }).input
+      return { status: 200, text: JSON.stringify({ embeddings: [VEC[input] ?? [0, 0, 1]] }) }
+    }
+    return { status: 500, text: '' } // no chat answers: these tests are about the cache alone
+  }
+
+  test('a question that means the same as an answered one is served from the cache', async ($, on) => {
+    const { seen } = world(on, { ollama: server })
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'local', 'on')
+    await submit($, '!docker kya hai')
+    await $.turn.complete(turnEnd('Docker containers chalata hai.'))
+    const res = await submit($, 'docker kya cheez hai')
+    expect(res.drop).toContain('similar question, "docker kya hai"')
+    expect(res.drop).toContain('Docker containers chalata hai.')
+    expect(seen.prompts.length).toBe(1)
+  })
+
+  test('a different question is not matched', async ($, on) => {
+    const { seen } = world(on, { ollama: server })
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'local', 'on')
+    await submit($, '!docker kya hai')
+    await $.turn.complete(turnEnd('Docker containers chalata hai.'))
+    const res = await submit($, 'git rebase kya hai')
+    expect(res.drop).toBeUndefined()
+    expect(seen.prompts.length).toBe(2)
+  })
+
+  test('with the local model off, no embedding is asked for', async ($, on) => {
+    const { seen } = world(on, { ollama: server })
+    await submit($, 'docker kya hai')
+    expect(seen.fetches.filter(u => u.endsWith('/api/embed')).length).toBe(0)
   })
 })

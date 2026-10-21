@@ -211,6 +211,18 @@ export function hasModel(models: readonly string[], model: string): boolean {
 /** Small models that run well on a CPU, best first: tried in turn when one fails to download. */
 export const FALLBACK_MODELS = ['qwen3:4b', 'qwen3:1.7b', 'qwen2.5:1.5b', 'gemma3:4b', 'llama3.2:3b', 'gemma3:1b']
 
+/** The embedding model behind similar-question hits: 46 MB, fast on a CPU. */
+export const EMBED_MODEL = 'all-minilm'
+
+/** Fetches the embedding model in the background if it is missing; quiet, and harmless when it fails. */
+export async function ensureEmbedModel($: EngineInterface, opts: Options) {
+  const name = state.cfg.embedModel ?? EMBED_MODEL
+  const models = await listLocalModels($, opts.ollamaUrl)
+  if (!models || hasModel(models, name)) return
+  const bin = await findOllama($, await detectPlatform($))
+  if (bin) await pullModel($, bin, name)
+}
+
 export type SetupOutcome = 'ready' | 'started' | 'running' | 'declined' | 'unreachable'
 
 export async function ensureLocal(
@@ -228,6 +240,7 @@ export async function ensureLocal(
   const models = await listLocalModels($, opts.ollamaUrl)
   if (models !== undefined && hasModel(models, cfg.localModel)) {
     await turnOn()
+    if (opts.semanticCache) void ensureEmbedModel($, opts).catch(() => undefined)
     return 'ready'
   }
   // Nothing picked by hand and a good small model already installed: use it rather than download another.
@@ -292,6 +305,7 @@ export async function ensureLocal(
         cfg.localModel = got
       }
       await turnOn()
+      if (opts.semanticCache) await ensureEmbedModel($, opts).catch(() => undefined)
       say($, 'Local model is ready!')
       $.ui.toast(`Local model is ready! ${mode === 'on' ? 'Prompts that start with ~' : 'General questions'} now run on your machine, 0 Claude tokens.`)
     } catch {

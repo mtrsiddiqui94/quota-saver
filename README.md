@@ -11,10 +11,11 @@
 | **Output diet** | Before Bash, web or MCP output enters the conversation (where every later request would re-send it): command-aware filters drop passing tests, progress bars, install chatter and repeated lines; what is still long keeps its head, its error lines and its tail. It changes an output only when that saves 30% or more, and keeps the original in an owner-only folder (`~/.quota-saver/raw`, 3 days), named at the end of the result so Claude reads a line range instead of re-running the command. `QS_RAW=1 <command>` leaves one command's output whole. Error lines are never dropped; file contents (Read) are never cut. |
 | **Outline tool** | `mcp__quota-saver__outline` gives a file's functions, classes, types or headings with line numbers (JS/TS, Python, Go, Rust, Java, Kotlin, C#, Swift, PHP, Ruby, Markdown), so Claude reads only the range it needs instead of the whole file. A refused big read points to it. |
 | **Reply style** | `/quota-saver style lite` (short, plain) or `full` (telegraphic; code, paths and errors stay exact) cuts output tokens, the most expensive kind. Off by default. |
-| **Junk guard** | Whole reads of `node_modules`, `dist`, `build` and other dependency or build folders, lock files and minified bundles are refused once with the reason. Source files are never affected. |
+| **Junk guard** | Whole reads of `node_modules`, `dist`, `build`, `ios/Pods`, `.expo`, `.next`, `.nuxt`, `.output` and other dependency or build folders, lock files and minified bundles are refused once with the reason. Source files are never affected. |
 | **Read guard** | A whole read of a large file is refused once with a hint to search first. A re-read of an unchanged file is refused once. An identical retry always goes through. |
 | **Auto task detection** | "fix the login error", "ye samjhao", "tests chalao": the plugin recognises the kind of task and attaches a short, lean instruction for it. No commands to remember. |
 | **Personal dictionary** | `/shortcut dp = deploy to staging, run tests first`. Then type `dp`, or `#dp` inside a sentence. Expanded locally. |
+| **Similar-question cache** | With the local model on, a question that *means* the same as one answered before ("docker kya cheez hai" after "docker kya hai") is answered from disk too. A 46 MB local embedding model compares meanings; the bar is strict (cosine 0.92), and the reply names the earlier question. Setting `semanticCache`. |
 | **Local answer cache** | A question answered before, in a turn that changed nothing, is answered from disk for **0 tokens**. Roman Urdu spelling variants ("kia ha" / "kya hai") count as the same question. Entries expire after 3 days. A leading `!` always asks Claude fresh. |
 | **Local model team (Ollama)** | Optional, off by default. General questions run on your machine for **0 Claude tokens**: a fast model takes short questions, a strong one the rest. Every local answer is checked (wrong script, loops, empty); a bad one goes to the other model, then to Claude. `/local pick` measures the installed models on this machine and sets the team. Reasoning models answer without their slow "thinking" step. Project work always goes to Claude. |
 | **Smart handoff** | `/new-task` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/last-task` loads the last note in a new session instead of the whole history. |
@@ -105,6 +106,7 @@ In `/config`, under `quota-saver`:
 | `autoIntent` | `true` | Attach the lean task guide |
 | `localCache` | `true` | Serve repeated questions from disk |
 | `modelAdvisor` | `true` | Suggest a lighter model for light tasks on Opus |
+| `semanticCache` | `true` | Answer questions that mean the same as an earlier one (local model on) |
 | `guardJunk` | `true` | Refuse whole reads of dependency/build folders, lock files, minified bundles |
 | `ollamaUrl` | `http://localhost:11434` | Local model server |
 | `setupLocalModel` | `ask` | `yes` / `ask` / `no`: what to do about the local model on the first session |

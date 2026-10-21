@@ -23,6 +23,8 @@ export type Settings = {
   isModelChosen: boolean
   /** How terse Claude's replies are: off (plain lean rules), lite, or full (telegraphic). */
   style?: 'off' | 'lite' | 'full'
+  /** The small embedding model behind the similar-question cache. */
+  embedModel?: string
   /** Whether the first-run choice about the local model has been acted on. */
   isOnboarded: boolean
 }
@@ -98,6 +100,23 @@ export async function listLocalModelSizes($: EngineInterface, url: string): Prom
     if (!res.ok) return undefined
     const body = JSON.parse(res.text) as { models?: { name?: string; size?: number }[] }
     return (body.models ?? []).filter(m => m.name).map(m => ({ name: m.name ?? '', size: m.size ?? 0 }))
+  } catch {
+    return undefined
+  }
+}
+
+/** The embedding of a text from a local embedding model, or undefined when it cannot be had. */
+export async function embed($: EngineInterface, url: string, model: string, text: string): Promise<number[] | undefined> {
+  try {
+    const res = await $.http.fetch(`${url.replace(/\/$/, '')}/api/embed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model, input: text }),
+    })
+    if (!res.ok) return undefined
+    const body = JSON.parse(res.text) as { embeddings?: number[][] }
+    const vec = body.embeddings?.[0]
+    return Array.isArray(vec) && vec.length > 0 ? vec : undefined
   } catch {
     return undefined
   }

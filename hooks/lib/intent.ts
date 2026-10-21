@@ -12,9 +12,10 @@ const PATTERNS: ReadonlyArray<[Intent, RegExp]> = [
 ]
 
 export function detectIntent(text: string): Intent | undefined {
-  if (text.length > 2000) return undefined
+  // A long prompt (a spec, a pasted error) says what it wants near the start.
+  const head = text.slice(0, 1500)
   for (const [intent, pattern] of PATTERNS) {
-    if (pattern.test(text)) return intent
+    if (pattern.test(head)) return intent
   }
   return undefined
 }

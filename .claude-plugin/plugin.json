@@ -1,6 +1,6 @@
 {
   "name": "quota-saver",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Makes your Claude Code quota last longer. English + Roman Urdu prompts.",
   "author": {
     "name": "mtrsiddiqui94"
@@ -63,6 +63,12 @@
       "type": "boolean",
       "title": "Model advisor",
       "description": "When a heavy model (Opus) is on and the task is light, say once which lighter model fits.",
+      "default": true
+    },
+    "semanticCache": {
+      "type": "boolean",
+      "title": "Similar-question cache",
+      "description": "With the local model on, answer a question that means the same as one answered before (a 46 MB local embedding model compares them). Start a prompt with ! for a fresh answer.",
       "default": true
     }
   },

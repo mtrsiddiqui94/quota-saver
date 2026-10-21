@@ -10,10 +10,11 @@ import type { Args, EngineInterface, On } from 'claude-code'
 import { detectIntent, GUIDE, GUIDE_SUMMARY } from '../lib/intent'
 import { language, replaceWords, userWords } from '../lib/prompt'
 import { tokens } from '../lib/trim'
-import { routeLocal } from '../lib/local'
+import { embed, routeLocal } from '../lib/local'
+import { EMBED_MODEL } from './local-setup'
 import { answerLocally, teamOrder } from './local-team'
 import { adviseModel } from './model-advisor'
-import { ANSWER_MAX, cacheKey, expand, lookup, remember } from '../lib/memory'
+import { ANSWER_MAX, cacheKey, expand, lookup, nearest, remember } from '../lib/memory'
 import type { AnswerCache, Dictionary } from '../lib/memory'
 import { k, record } from '../core/activity'
 import { count, ensureLoaded, state, STORE } from '../core/state'
@@ -43,6 +44,8 @@ export function installPromptRouter(on: On, opts: Options) {
     await ensureLoaded($)
     const { cfg, turn } = state
     turn.key = undefined
+    turn.question = undefined
+    turn.vec = undefined
     turn.hasSideEffects = false
     turn.toolCalls = 0
     turn.keptOutAtStart = state.keptOut
@@ -77,6 +80,25 @@ export function installPromptRouter(on: On, opts: Options) {
         }
       }
       turn.key = key
+      turn.question = words
+      // Similar, not identical: a small local embedding model compares meanings.
+      // A fresh (!) question skips the lookup but is still embedded, so its answer can serve later ones.
+      if (cfg.local !== 'off' && opts.semanticCache) {
+        const cwd = await $.session.cwd()
+        const vec = await embed($, opts.ollamaUrl, cfg.embedModel ?? EMBED_MODEL, words)
+        if (vec) turn.vec = vec
+        if (vec && !isFresh) {
+          const near = nearest(((await $.store.get(STORE.answers)) ?? {}) as AnswerCache, cwd, vec, now)
+          if (near) {
+            await countFreeAnswer($)
+            await count($, { cacheHits: 1 })
+            await record($, 'saved', `answered from the local cache: a similar question (${Math.round(near.score * 100)}% alike) was answered ${age(now - near.hit.at)} ago; 0 tokens`)
+            return {
+              drop: `[quota-saver: saved answer to a similar question${near.hit.q ? `, "${near.hit.q.slice(0, 80)}"` : ''} (${Math.round(near.score * 100)}% alike), 0 tokens. Start with ! for a fresh answer]\n\n${near.hit.answer}`,
+            }
+          }
+        }
+      }
       await record($, 'info', 'not asked before (or changed since) → no saved answer')
     }
 
@@ -130,12 +152,13 @@ export function installPromptRouter(on: On, opts: Options) {
 
 /** At the end of a main-loop turn: keeps its answer when it is safe to replay. */
 export async function rememberAnswer($: EngineInterface, e: Args<'turn.complete'>) {
-  const { key, hasSideEffects } = state.turn
+  const { key, hasSideEffects, question, vec } = state.turn
   state.turn.key = undefined
+  state.turn.vec = undefined
   const isReplayable =
     state.cfg.isEnabled && key !== undefined && e.reason === 'answer' && !hasSideEffects &&
     e.answer.length > 0 && e.answer.length <= ANSWER_MAX
   if (!isReplayable) return
   const cache = ((await $.store.get(STORE.answers)) ?? {}) as AnswerCache
-  await $.store.set(STORE.answers, remember(cache, key, e.answer, await $.clock.now()))
+  await $.store.set(STORE.answers, remember(cache, key, e.answer, await $.clock.now(), { q: question, vec }))
 }
