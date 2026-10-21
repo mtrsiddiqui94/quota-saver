@@ -14,7 +14,7 @@
 | **Auto task detection** | "fix the login error", "ye samjhao", "tests chalao": the plugin recognises the kind of task and attaches a short, lean instruction for it. No commands to remember. |
 | **Personal dictionary** | `/shortcut dp = deploy to staging, run tests first`. Then type `dp`, or `#dp` inside a sentence. Expanded locally. |
 | **Local answer cache** | A question answered before, in a turn that changed nothing, is answered from disk for **0 tokens**. Roman Urdu spelling variants ("kia ha" / "kya hai") count as the same question. Entries expire after 3 days. A leading `!` always asks Claude fresh. |
-| **Local model (Ollama)** | Optional, off by default. General questions run on a model on your machine for **0 Claude tokens**. Project work always goes to Claude. |
+| **Local model team (Ollama)** | Optional, off by default. General questions run on your machine for **0 Claude tokens**: a fast model takes short questions, a strong one the rest. Every local answer is checked (wrong script, loops, empty); a bad one goes to the other model, then to Claude. `/local pick` measures the installed models on this machine and sets the team. Reasoning models answer without their slow "thinking" step. Project work always goes to Claude. |
 | **Smart handoff** | `/new-task` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/last-task` loads the last note in a new session instead of the whole history. |
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
 | **Audit** | `/quota-saver audit` measures what rides on *every* request before your prompt: MCP tool schemas per server, CLAUDE.md and other memory files, skills and agents, and says what to cut. Runs once by itself per context and speaks up only if something is heavy. |
@@ -59,7 +59,8 @@ claude plugin install quota-saver@quota-saver
 | `/quota-saver on` · `/quota-saver off` | Turn the whole plugin on or off (remembered) |
 | `/local` | Local model status and setup steps |
 | `/local on` · `/local auto` · `/local off` | Sets everything up if needed, then `on`: prompts starting with `~` run locally; `auto`: general questions run locally too |
-| `/local model <name>` | Choose the Ollama model (default `qwen2.5:1.5b`) |
+| `/local pick` | Test every installed model here (speed, usable answers, right language) and set the fast and strong models |
+| `/local model <name>` | Use one model for everything |
 | `/activity on` · `/activity off` · `/activity text` | Watch what the plugin does on each prompt in a live terminal window, stop, or list it here |
 | `/shortcut name = meaning` · `/shortcut` | Save a shortcut, or list them |
 | `/forget name` · `/forget cache` | Forget a shortcut, or clear the answer cache |

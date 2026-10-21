@@ -7,11 +7,12 @@ import { parseEntry } from '../lib/memory'
 import type { Dictionary } from '../lib/memory'
 import { formatK, tokens } from '../lib/trim'
 import { record } from '../core/activity'
-import { daily, dayOf, EMPTY_STATS, lifetime, saveSettings, state, STORE } from '../core/state'
+import { daily, dayOf, EMPTY_STATS, ensureLoaded, lifetime, saveSettings, state, STORE } from '../core/state'
 import type { Stats } from '../core/state'
 import { audit, formatAudit } from './audit'
 import type { Options } from '../core/state'
 import { ensureLocal, hasModel, setup } from './local-setup'
+import { runPick } from './local-team'
 import type { SetupOutcome } from './local-setup'
 import { refreshStatus } from './meter'
 
@@ -29,7 +30,7 @@ const FAIL = { text: 'quota-saver: this command failed. Please try again.' }
 
 export const COMMANDS = [
   { name: 'quota-saver', description: 'Token savings report; /quota-saver on or off switches the whole plugin', argumentHint: '[on | off | audit | week | month]' },
-  { name: 'local', description: 'Local model (Ollama): /local on, /local auto, /local off, /local model <name>', argumentHint: '[on | auto | off | model <name>]' },
+  { name: 'local', description: 'Local model (Ollama): /local on, auto, off, pick (test and set the team), model <name>', argumentHint: '[on | auto | off | pick | model <name>]' },
   { name: 'shortcut', description: 'Your shortcuts: /shortcut dp = deploy to staging. Then type just "dp" or "#dp"', argumentHint: '[name = meaning]' },
   { name: 'forget', description: 'Forget a shortcut, or clear the saved-answer cache', argumentHint: '[name | cache]' },
   { name: 'new-task', description: 'Summarise the session in 12 lines and clear the context (a cheap /compact + /clear)', argumentHint: '[next task, optional]' },
@@ -55,6 +56,7 @@ async function getDictionary($: EngineInterface): Promise<Dictionary> {
 const ctx = { opts: undefined as unknown as Options }
 
 const reportCommand: Hook<'command.run'> = async ($, e) => {
+  await ensureLoaded($)
   const { cfg, session } = state
   const arg = e.args.trim().toLowerCase()
   if (arg === 'on' || arg === 'off') {
@@ -108,6 +110,7 @@ const reportCommand: Hook<'command.run'> = async ($, e) => {
 }
 
 const localCommand: Hook<'command.run'> = async ($, e) => {
+  await ensureLoaded($)
   const { cfg } = state
   const [word = '', ...rest] = e.args.trim().split(/\s+/)
   const arg = word.toLowerCase()
@@ -126,10 +129,12 @@ const localCommand: Hook<'command.run'> = async ($, e) => {
     await refreshStatus($).catch(() => undefined)
     return { text: LOCAL_OUTCOME[outcome](cfg.localModel, how, ctx.opts.ollamaUrl) }
   }
+  if (arg === 'pick') return { text: await runPick($, ctx.opts) }
   if (arg === 'model') {
     const name = rest.join(' ').trim()
-    if (!name) return { text: 'Format: /local model qwen2.5:1.5b' }
+    if (!name) return { text: 'Format: /local model qwen3:4b' }
     cfg.localModel = name
+    cfg.fastModel = undefined
     cfg.isModelChosen = true
     await saveSettings($)
     if (cfg.local === 'off') return { text: `Local model is now ${name}. Turn it on with /local on` }
@@ -145,7 +150,7 @@ const localCommand: Hook<'command.run'> = async ($, e) => {
   }
 
   const models = await listLocalModels($, ctx.opts.ollamaUrl)
-  const header = `Local mode: ${cfg.local} · model: ${cfg.localModel}`
+  const header = `Local mode: ${cfg.local} · team: strong ${cfg.localModel}${cfg.fastModel ? `, fast ${cfg.fastModel}` : ''}`
   if (models === undefined) {
     return { text: `${header}\nOllama is not running.\n\nType /local on: the plugin installs Ollama, downloads the model and turns it on for you.` }
   }

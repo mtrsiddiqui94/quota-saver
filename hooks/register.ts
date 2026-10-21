@@ -55,7 +55,7 @@ export const register: Register = (on, options) => {
   installPromptRouter(on, opts)
   installReadGuard(on, opts)
   installOutputDiet(on, opts)
-  installHandoff(on)
+  installHandoff(on, opts)
   installCommands(on, opts)
   installActivity(on)
 }

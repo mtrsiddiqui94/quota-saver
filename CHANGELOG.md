@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] - 2026-10-21
+
+### Added
+- Local model team: a fast model for short questions and a strong one for the
+  rest. Each local answer is judged (wrong script, loops, too short); an
+  unusable one goes to the other model, and only then to Claude.
+- `/local pick`: measures every installed model on this machine (speed,
+  usable answers, right language) and sets the team.
+- With local mode on, `/new-task` has the local model write the summary;
+  Haiku is the fallback.
+
+### Changed
+- Reasoning models (Qwen3 and later) are asked to skip their thinking step;
+  a model that refuses the option is asked again without it.
+- Settings load on first use as well as at session start, so a reload never
+  runs with defaults.
+- The system prompt for local answers insists on Roman Urdu for Roman Urdu
+  questions.
+
 ## [0.11.0] - 2026-10-21
 
 ### Changed

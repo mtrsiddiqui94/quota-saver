@@ -209,7 +209,7 @@ export function hasModel(models: readonly string[], model: string): boolean {
  * reports with a toast.
  */
 /** Small models that run well on a CPU, best first: tried in turn when one fails to download. */
-export const FALLBACK_MODELS = ['qwen2.5:1.5b', 'llama3.2:3b', 'gemma3:1b']
+export const FALLBACK_MODELS = ['qwen3:4b', 'qwen3:1.7b', 'qwen2.5:1.5b', 'gemma3:4b', 'llama3.2:3b', 'gemma3:1b']
 
 export type SetupOutcome = 'ready' | 'started' | 'running' | 'declined' | 'unreachable'
 

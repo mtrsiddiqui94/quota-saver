@@ -66,6 +66,7 @@ claude plugin install quota-saver@quota-saver --config setupLocalModel=yes
 |---|---|
 | `/quota-saver` | `Quota Saver: token savings` aur `Status: on` |
 | `/local` | Ollama aur model ki halat |
+| `/local pick` | Aapki machine par saare models test kar ke tez aur taqatwar model khud chunta hai |
 | `/shortcut test = tests chalao` phir `test` | Shortcut kaam kar raha hai |
 | `/quota-saver audit` | Har request ke saath kya jaata hai aur kya kam kiya ja sakta hai |
 | `/quota-saver week` | Pichhle 7 din ki bachat |

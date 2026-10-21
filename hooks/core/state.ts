@@ -133,7 +133,15 @@ export async function lifetime($: EngineInterface): Promise<Stats> {
   return { ...ZERO, ...(((await $.store.get(STORE.lifetime)) ?? {}) as Partial<Stats>) }
 }
 
+const loaded = { isDone: false }
+
+/** Loads the settings once, on first use: session.start may not have run (a reload, a test). */
+export async function ensureLoaded($: EngineInterface) {
+  if (!loaded.isDone) await loadSettings($)
+}
+
 export async function loadSettings($: EngineInterface) {
+  loaded.isDone = true
   const saved = ((await $.store.get(STORE.settings)) ?? {}) as Partial<Settings>
   Object.assign(state.cfg, DEFAULT_SETTINGS, saved)
   // A model nobody picked is the default of the version that saved it: use today's default instead.

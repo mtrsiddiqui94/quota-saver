@@ -10,11 +10,12 @@ import type { Args, EngineInterface, On } from 'claude-code'
 import { detectIntent, GUIDE, GUIDE_SUMMARY } from '../lib/intent'
 import { language, replaceWords, userWords } from '../lib/prompt'
 import { tokens } from '../lib/trim'
-import { askLocal, routeLocal } from '../lib/local'
+import { routeLocal } from '../lib/local'
+import { answerLocally, teamOrder } from './local-team'
 import { ANSWER_MAX, cacheKey, expand, lookup, remember } from '../lib/memory'
 import type { AnswerCache, Dictionary } from '../lib/memory'
 import { k, record } from '../core/activity'
-import { count, state, STORE } from '../core/state'
+import { count, ensureLoaded, state, STORE } from '../core/state'
 import type { Options } from '../core/state'
 
 // A turn that may have changed files or the system is never replayed from cache.
@@ -38,6 +39,7 @@ function age(ms: number): string {
 
 export function installPromptRouter(on: On, opts: Options) {
   on('prompt.submit', async ($, e, next) => {
+    await ensureLoaded($)
     const { cfg, turn } = state
     turn.key = undefined
     turn.hasSideEffects = false
@@ -79,22 +81,21 @@ export function installPromptRouter(on: On, opts: Options) {
 
     const localPrompt = isFresh ? undefined : routeLocal(words, cfg.local)
     if (localPrompt !== undefined) {
-      $.ui.status(`quota-saver: local model (${cfg.localModel}) is thinking…`)
-      await record($, 'local', `no project context needed → asking local model ${cfg.localModel}`)
-      const startedAt = await $.clock.now()
-      const reply = await askLocal($, opts.ollamaUrl, cfg.localModel, localPrompt)
-      const secs = Math.round(((await $.clock.now()) - startedAt) / 100) / 10
+      const first = teamOrder(localPrompt, cfg.localModel, cfg.fastModel)[0]
+      $.ui.status(`quota-saver: local model (${first}) is thinking…`)
+      await record($, 'local', `no project context needed → asking the local team (${first} first)`)
+      const reply = await answerLocally($, opts, localPrompt)
       $.ui.status(undefined)
       if (reply.isAnswered) {
         await countFreeAnswer($)
         await count($, { localAnswers: 1 })
-        await record($, 'saved', `local model answered in ${secs}s: 0 Claude tokens`)
+        await record($, 'saved', `${reply.model} answered in ${reply.secs}s, answer checked: 0 Claude tokens${reply.isLanguageMatch ? '' : ' (in another language)'}`)
         return {
-          drop: `[quota-saver: local model ${cfg.localModel}, 0 Claude tokens. Start with ! to ask Claude instead]\n\n${reply.text}`,
+          drop: `[quota-saver: local model ${reply.model}, 0 Claude tokens. Start with ! to ask Claude instead]\n\n${reply.text}`,
         }
       }
-      $.ui.toast(`Local model failed: ${reply.reason}. Asking Claude instead.`)
-      await record($, 'error', `local model failed (${reply.reason}) → falling back to Claude`)
+      $.ui.toast(`No usable local answer (${reply.reason}). Asking Claude instead.`)
+      await record($, 'error', `no usable local answer (${reply.reason}) → falling back to Claude`)
     } else if (cfg.local !== 'off' && !isFresh) {
       await record($, 'info', 'needs Claude (mentions the project, or is a task) → local model not used')
     }

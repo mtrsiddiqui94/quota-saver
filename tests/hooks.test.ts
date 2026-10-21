@@ -650,3 +650,73 @@ describe('menu commands', () => {
     expect(seen.prompts.length).toBe(0)
   })
 })
+
+describe('local team', () => {
+  /** An Ollama whose answer depends on the model asked. */
+  const team = (answers: Record<string, string | number>, seenBodies: string[] = []) => (url: string, body: string) => {
+    if (url.endsWith('/api/tags')) return { status: 200, text: JSON.stringify({ models: Object.keys(answers).map(name => ({ name, size: 1e9 })) }) }
+    seenBodies.push(body)
+    const model = (JSON.parse(body) as { model: string }).model
+    const a = answers[model]
+    return typeof a === 'number' ? { status: a, text: '' } : { status: 200, text: JSON.stringify({ message: { content: a ?? '' } }) }
+  }
+  const settings = (fast: string | undefined, strong: string) => ({
+    settings: { isEnabled: true, local: 'on', localModel: strong, fastModel: fast, isModelChosen: true, isOnboarded: true },
+  })
+
+  test('a wrong-script answer from the fast model goes to the strong one', async ($, on) => {
+    const { seen } = world(on, {
+      ollama: team({ 'qwen3:1.7b': 'Docker یک پروژه است که سیستم را ساده می‌کند', 'qwen3:4b': 'Docker aik tool hai jo apps ko containers mein chalata hai.' }),
+      store: settings('qwen3:1.7b', 'qwen3:4b'),
+    })
+    await run($, 'local', 'on')
+    await run($, 'activity', 'on')
+    const res = await submit($, '~docker kya hai')
+    expect(res.drop).toContain('[quota-saver: local model qwen3:4b')
+    expect(res.drop).toContain('Docker aik tool hai')
+    expect(seen.prompts.length).toBe(0)
+    expect((await run($, 'activity', 'text')).text).toContain('qwen3:1.7b answered in')
+  })
+
+  test('when both models fail, the question goes to Claude', async ($, on) => {
+    const { seen } = world(on, { ollama: team({ 'qwen3:1.7b': 'ok', 'qwen3:4b': 500 }), store: settings('qwen3:1.7b', 'qwen3:4b') })
+    await run($, 'local', 'on')
+    const res = await submit($, '~docker kya hai')
+    expect(res.drop).toBeUndefined()
+    expect(seen.prompts[0]?.text).toBe('docker kya hai')
+  })
+
+  test('reasoning is switched off, and a model that refuses the switch is asked again without it', async ($, on) => {
+    const bodies: string[] = []
+    let calls = 0
+    world(on, {
+      ollama: (url, body) => {
+        if (url.endsWith('/api/tags')) return { status: 200, text: JSON.stringify({ models: [{ name: 'gemma3:4b', size: 3e9 }] }) }
+        bodies.push(body)
+        calls += 1
+        if (calls === 1) return { status: 400, text: '{"error":"gemma3:4b does not support thinking"}' }
+        return { status: 200, text: JSON.stringify({ message: { content: 'An API lets programs talk to each other.' } }) }
+      },
+      store: settings(undefined, 'gemma3:4b'),
+    })
+    await run($, 'local', 'on')
+    const res = await submit($, '~what is an api?')
+    expect(res.drop).toContain('An API lets programs talk')
+    expect(JSON.parse(bodies[0] ?? '{}').think).toBe(false)
+    expect(JSON.parse(bodies[1] ?? '{}').think).toBeUndefined()
+  })
+
+  test('/local pick measures each model and sets the team', async ($, on) => {
+    world(on, {
+      ollama: team({
+        'qwen3:1.7b': 'An API is a way for programs to talk. Docker aik tool hai jo apps chalata hai, merge aur rebase mein farq hai.',
+        'qwen3:4b': 'An API is a contract between programs. Docker aik tool hai jo containers mein apps chalata hai.',
+        'bad:1b': 'Docker یک پروژه است',
+      }),
+    })
+    const res = await run($, 'local', 'pick')
+    expect(res.text).toContain('Local models on this machine')
+    expect(res.text).toMatch(/Team: strong = qwen3:/)
+    expect(res.text).toContain('bad:1b')
+  })
+})

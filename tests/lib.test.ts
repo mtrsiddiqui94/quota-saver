@@ -4,6 +4,8 @@ import { detectIntent } from '../hooks/lib/intent'
 import { cacheKey, expand, lookup, normalize, parseEntry, remember } from '../hooks/lib/memory'
 import { hasModel } from '../hooks/features/local-setup'
 import { compareTurn } from '../hooks/features/compare'
+import { pickTeam, teamOrder } from '../hooks/features/local-team'
+import { judgeReply, stripThinking } from '../hooks/lib/judge'
 import { junkReason } from '../hooks/lib/junk'
 import { routeLocal } from '../hooks/lib/local'
 import { language, replaceWords, userWords } from '../hooks/lib/prompt'
@@ -95,4 +97,32 @@ test('typed words are found inside editor blocks', async () => {
 test('reply language is told apart', async () => {
   expect(language('main aik android game banana chahta hun ideas do')).toBe('Roman Urdu')
   expect(language('give me ideas for an android game')).toBe('English')
+})
+
+test('the judge rejects wrong script, loops and empty replies', async () => {
+  expect(judgeReply('docker kya hai?', 'Docker یک پروژه است که سیستم').isUsable).toBe(false)
+  expect(judgeReply('what is x?', 'ok').isUsable).toBe(false)
+  const loop = Array.from({ length: 4 }, () => 'This is the same line again and again').join('\n')
+  expect(judgeReply('what is x?', loop).isUsable).toBe(false)
+  const good = judgeReply('docker kya hai?', 'Docker aik tool hai jo apps ko containers mein chalata hai.')
+  expect(good).toEqual({ isUsable: true, isLanguageMatch: true })
+  expect(judgeReply('docker kya hai?', 'Docker is a tool that runs apps in containers.').isLanguageMatch).toBe(false)
+  expect(stripThinking('<think>hmm</think>Answer')).toBe('Answer')
+})
+
+test('the team order puts the fast model first only for short questions', async () => {
+  expect(teamOrder('docker kya hai?', 'qwen3:4b', 'qwen3:1.7b')).toEqual(['qwen3:1.7b', 'qwen3:4b'])
+  expect(teamOrder('x'.repeat(200), 'qwen3:4b', 'qwen3:1.7b')).toEqual(['qwen3:4b', 'qwen3:1.7b'])
+  expect(teamOrder('q', 'qwen3:4b', undefined)).toEqual(['qwen3:4b'])
+})
+
+test('pickTeam: strong = best answers then larger; fast only when clearly faster', async () => {
+  const team = pickTeam([
+    { model: 'a:1b', size: 1e9, secs: 2, usable: 3, matched: 2 },
+    { model: 'b:4b', size: 3e9, secs: 6, usable: 3, matched: 3 },
+    { model: 'c:9b', size: 6e9, secs: 40, usable: 3, matched: 3 },
+    { model: 'd:2b', size: 2e9, secs: 3, usable: 2, matched: 2 },
+  ])
+  expect(team).toEqual({ strong: 'b:4b', fast: 'a:1b' })
+  expect(pickTeam([])).toEqual({})
 })
