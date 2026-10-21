@@ -75,6 +75,8 @@ export const state = {
   isAudited: false,
   /** The main loop's model on its last turn, and the context it carried then. */
   lastTurn: undefined as { model: string; contextTokens: number } | undefined,
+  /** Quota readings per window (`<kind>:<resetsAt>`), for the burn rate. */
+  burn: new Map<string, { at: number; pct: number }[]>(),
   /** Near the quota limit with a local model on: general questions go local by themselves (as /local auto). */
   isQuotaMode: false,
   /** Quota alarms already raised, as `<window>:<level>`, so each sounds once per reset. */

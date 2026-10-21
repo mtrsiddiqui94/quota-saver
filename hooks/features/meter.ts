@@ -4,6 +4,7 @@ import type { EngineInterface } from 'claude-code'
 
 import { formatK, tokens } from '../lib/trim'
 import { clock, record } from '../core/activity'
+import { humanMinutes, minutesToFull } from '../lib/burn'
 import { state } from '../core/state'
 
 export async function refreshStatus($: EngineInterface) {
@@ -22,6 +23,13 @@ export async function refreshStatus($: EngineInterface) {
   $.ui.status(parts.join(' · '))
 
   state.isQuotaMode = state.cfg.local !== 'off' && rateLimits.some(r => r.percentUsed >= 90)
+  const now = await $.clock.now()
+  for (const r of rateLimits) {
+    const key = `${r.kind}:${r.resetsAt ?? ''}`
+    const samples = state.burn.get(key) ?? []
+    if (samples.at(-1)?.pct !== r.percentUsed) samples.push({ at: now, pct: r.percentUsed })
+    state.burn.set(key, samples.slice(-30))
+  }
   for (const r of rateLimits) {
     const level = r.percentUsed >= 95 ? 95 : r.percentUsed >= 80 ? 80 : 0
     const key = `${r.kind}:${r.resetsAt ?? ''}:${level}`
@@ -29,9 +37,11 @@ export async function refreshStatus($: EngineInterface) {
     state.quotaWarned.add(key)
     const window = r.kind === 'five_hour' ? '5-hour' : r.kind === 'seven_day' ? 'weekly' : r.kind
     const resets = r.resetsAt ? ` It resets at ${clock(Date.parse(r.resetsAt))}.` : ''
+    const toFull = minutesToFull(state.burn.get(`${r.kind}:${r.resetsAt ?? ''}`) ?? [])
+    const pace = toFull !== undefined ? ` At this pace it is full in ~${humanMinutes(toFull)}.` : ''
     await record($, 'info', `${window} quota ${r.percentUsed}% used`)
     $.ui.toast(
-      `${window} quota ${r.percentUsed}% used.${resets} For easy tasks: /model haiku, and /local auto for general questions.`,
+      `${window} quota ${r.percentUsed}% used.${pace}${resets} For easy tasks: /model haiku, and /local auto for general questions.`,
     )
   }
 

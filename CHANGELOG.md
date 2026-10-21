@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.15.0] - 2026-10-21
+
+More from third-party tools (credit: codebase-index-mcp, Serena, Aider's repo
+map, ccusage, caveman).
+
+### Added
+- `mcp__quota-saver__outline`: a file's declarations or headings with line
+  numbers, across common languages, so Claude reads a range instead of the
+  whole file. Refused big reads point to it, and the lean rules mention it.
+- Burn rate: each limit's time to full at the current pace, in `/quota-saver`
+  and in the quota alarm.
+- Reply styles: `/quota-saver style lite | full | off` (off by default).
+
 ## [0.14.0] - 2026-10-21
 
 The best parts of other token savers, combined (credit: context-saver,

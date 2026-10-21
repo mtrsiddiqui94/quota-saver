@@ -13,13 +13,20 @@ const RULES = `# Token economy (quota-saver plugin)
 The user pays per token and has a limited quota. Work lean:
 - The user may write in Roman Urdu, English or a mix. Understand it directly; reply in the same style.
 - Keep replies short: the answer or result first, no recap of what you did, no restating the question.
-- Search before reading: use Grep/Glob or \`grep -n\` to find the lines, then Read with offset/limit. Never read a whole large file to find one thing.
+- Search before reading: use mcp__quota-saver__outline (a file's functions and classes with line numbers), Grep/Glob or \`grep -n\` to find the lines, then Read with offset/limit. Never read a whole large file to find one thing.
 - Do not re-read a file already in context unless it changed. Do not re-run a command just to see its output again.
 - Pipe noisy commands (tests, builds, installs) through \`tail\`/\`grep\` and prefer quiet flags.
 - For broad codebase exploration, delegate to the \`quota-saver:explorer\` agent (cheap model) and use its summary.
 - Make changes with Edit (small diffs), not full-file rewrites.
 - No openers or praise ("Great question", "Sure!"), no closing offers of extra work. Stop when the task is done.
 - When an output was shortened, its full text is in the file named at its end: read a line range there instead of re-running the command.`
+
+// Reply styles, inspired by caveman: fewer output tokens, which cost the most per token.
+const STYLES: Record<'off' | 'lite' | 'full', string | undefined> = {
+  off: undefined,
+  lite: '# Reply style (quota-saver: lite)\nShort, plain sentences. No filler, hedging or restating. Lists over paragraphs.',
+  full: '# Reply style (quota-saver: full)\nTelegraphic: fragments are fine, drop articles and filler, one idea per line. Keep code, paths, numbers, commands and error text exact. Full sentences only for warnings that could cause data loss.',
+}
 
 export const EXPLORER = {
   name: 'explorer',
@@ -43,6 +50,8 @@ export function installRules(on: On) {
       await record($, 'info', `system prompt: +${tokens(RULES.length)} tokens of lean rules (answer first, no recaps, search before reading, small edits, reply in your language)`)
     }
     const sections = [...composed.sections, { id: 'quota-saver:rules', text: RULES, scope: 'session' as const }]
+    const style = STYLES[state.cfg.style ?? 'off']
+    if (style) sections.push({ id: 'quota-saver:style', text: style, scope: 'session' as const })
     if (state.handoff.active) {
       sections.push({
         id: 'quota-saver:handoff',

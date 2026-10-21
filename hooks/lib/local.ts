@@ -21,6 +21,8 @@ export type Settings = {
   urduModel?: string
   /** True once the person picked the model with /local model; until then the default (or what is installed) is used. */
   isModelChosen: boolean
+  /** How terse Claude's replies are: off (plain lean rules), lite, or full (telegraphic). */
+  style?: 'off' | 'lite' | 'full'
   /** Whether the first-run choice about the local model has been acted on. */
   isOnboarded: boolean
 }

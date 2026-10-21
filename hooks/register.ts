@@ -13,6 +13,7 @@ import { warnModelSwitch } from './features/model-switch'
 import { installHandoff } from './features/handoff'
 import { autostartLocal } from './features/local-setup'
 import { refreshStatus } from './features/meter'
+import { installOutlineTool, OUTLINE_SPEC } from './features/outline-tool'
 import { installOutputDiet, pruneArchive } from './features/output-diet'
 import { installPromptRouter, rememberAnswer } from './features/prompt-router'
 import { installReadGuard } from './features/read-guard'
@@ -25,6 +26,7 @@ export const register: Register = (on, options) => {
     await loadSettings($)
     for (const spec of COMMANDS) await $.command.register(spec)
     await $.agent.register(EXPLORER).catch(() => undefined)
+    await $.tool.register(OUTLINE_SPEC).catch(() => undefined)
     await autostartLocal($, opts).catch(() => undefined)
     await pruneArchive($).catch(() => undefined)
     return next(e)
@@ -59,4 +61,5 @@ export const register: Register = (on, options) => {
   installHandoff(on, opts)
   installCommands(on, opts)
   installActivity(on)
+  installOutlineTool(on)
 }

@@ -7,7 +7,9 @@ import { compareTurn } from '../hooks/features/compare'
 import { pickTeam, teamOrder } from '../hooks/features/local-team'
 import { judgeReply, stripThinking } from '../hooks/lib/judge'
 import { collapseRepeats, commandKind, filterOutput } from '../hooks/lib/filters'
+import { humanMinutes, minutesToFull } from '../hooks/lib/burn'
 import { junkReason } from '../hooks/lib/junk'
+import { formatOutline, outline } from '../hooks/lib/outline'
 import { routeLocal } from '../hooks/lib/local'
 import { language, replaceWords, userWords } from '../hooks/lib/prompt'
 import { trimOutput } from '../hooks/lib/trim'
@@ -154,4 +156,48 @@ test('filters drop noise and passing tests, never errors', async () => {
   expect(t?.text).toBe('test_b.py::test_two FAILED\nAssertionError: 1 != 2')
   expect(collapseRepeats(['a', 'a', 'a', 'b'])).toEqual(['a  [×3]', 'b'])
   expect(filterOutput('ls', 'one\ntwo')).toBeUndefined()
+})
+
+const TS_FILE = [
+  "import x from 'y'",
+  'export function login(user: User) {',
+  '  if (user) {',
+  '  }',
+  '}',
+  'export class AuthService {',
+  '  constructor(private db: Db) {',
+  '  }',
+  '  async verify(token: string): Promise<boolean> {',
+  '    return true',
+  '  }',
+  '}',
+  'export const hash = async (s: string) => s',
+  'export interface User { id: string }',
+].join('\n')
+
+test('outline finds declarations with line numbers and skips control flow', async () => {
+  const o = outline('/p/auth.ts', TS_FILE)
+  expect(o.lines).toBe(14)
+  const text = o.symbols.join('\n')
+  expect(text).toContain('2  export function login(user: User)')
+  expect(text).toContain('6  export class AuthService')
+  expect(text).toContain('async verify(token: string): Promise<boolean>')
+  expect(text).toContain('13  export const hash = async (s: string) => s')
+  expect(text).toContain('14  export interface User')
+  expect(text).not.toContain('if (user)')
+})
+
+test('outline works for Python and Markdown too', async () => {
+  const py = outline('/p/app.py', 'import os\nclass Repo:\n    def save(self, x):\n        pass\nasync def main():\n    pass')
+  expect(py.symbols.map(s => s.trim())).toEqual(['2  class Repo:', '3    def save(self, x):', '5  async def main():'])
+  const md = outline('/p/README.md', '# Title\ntext\n## Install\nmore')
+  expect(md.symbols.length).toBe(2)
+  expect(formatOutline('a.txt', outline('a.txt', 'plain text'))).toContain('no declarations recognised')
+})
+
+test('burn rate projects time to full from the pace so far', async () => {
+  expect(minutesToFull([{ at: 0, pct: 40 }, { at: 10 * 60_000, pct: 50 }])).toBe(50)
+  expect(minutesToFull([{ at: 0, pct: 40 }])).toBeUndefined()
+  expect(minutesToFull([{ at: 0, pct: 40 }, { at: 60_000, pct: 41 }])).toBeUndefined()
+  expect(humanMinutes(135)).toBe('2 h 15 min')
 })

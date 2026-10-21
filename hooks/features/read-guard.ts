@@ -50,7 +50,7 @@ export function installReadGuard(on: On, opts: Options) {
         return {
           deny: isRepeat
             ? `quota-saver: ${path} was already read in this conversation and has not changed since. Use what is already in context. If it truly is no longer visible to you, call Read again with the same arguments and it will go through.`
-            : `quota-saver: ${path} is ${Math.round(size / 1024)} KB (~${formatK(tokens(size))} tokens). Find the relevant lines first (Grep or \`grep -n\`), then Read with offset/limit. If you really need the whole file, call Read again with the same arguments.`,
+            : `quota-saver: ${path} is ${Math.round(size / 1024)} KB (~${formatK(tokens(size))} tokens). Call mcp__quota-saver__outline with this path to see its functions and classes with line numbers, or grep it, then Read with offset/limit. If you really need the whole file, call Read again with the same arguments.`,
         }
       }
     }

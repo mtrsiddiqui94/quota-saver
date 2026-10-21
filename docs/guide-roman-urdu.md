@@ -8,6 +8,9 @@ Roman Urdu ya English, jaise chahein likhein. Quota Saver tokens wahan bachata h
 |---|---|
 | **Output diet** | Bash, test, build aur web ka lamba output (hazaron lines) shuru, aakhir aur error lines tak chhota kar deta hai, phir hi wo conversation mein jaata hai. Ye output har agle message ke saath dobara nahi jaata. |
 | **Smart output diet** | Test ke output mein pass hone wale tests aur `npm install` ki faltu lines hata deta hai. Error ki lines kabhi nahi hatati. Asal output `~/.quota-saver/raw` mein 3 din tak mehfooz rehta hai, taake Claude command dobara chalaye baghair us ka koi bhi hissa parh sake. |
+| **Outline tool** | Claude poori file parhne ke bajaye pehle us ka naqsha dekhta hai: kaunse functions aur classes kis line par hain. Phir sirf zaroori lines parhta hai. |
+| **Jawab ka style** | `/quota-saver style lite` ya `full`: Claude ke jawab chhote, is liye kam output tokens, jo sab se mehnge hote hain. |
+| **Burn rate** | `/quota-saver` batata hai ke isi raftaar se quota kab khatam hoga aur kab reset hoga. |
 | **Junk guard** | `node_modules`, `dist`, `build`, lock files aur `.min.js` jaisi faltu files poori parhne se rokta hai. Asal code par koi asar nahi. |
 | **Audit** | `/quota-saver audit`: har request ke saath kya jaata hai (MCP tools, CLAUDE.md, skills) aur kya kam karna chahiye. |
 | **Quota alarm** | 5 ghante ya hafte ki limit 80% aur 95% par pahunche to notice deta hai, ke kab reset hogi aur kaise bachayein. |

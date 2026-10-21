@@ -825,3 +825,43 @@ describe('smarter output diet', () => {
     expect(seen.prompts.length).toBe(0)
   })
 })
+
+describe('outline tool, reply style, burn rate', () => {
+  test('the outline tool returns declarations with line numbers instead of the file', async ($, on) => {
+    world(on, { files: { '/work/app/src/auth.ts': { size: 9_000, mtimeMs: 1 } } })
+    on('fs.read', () => ({ value: 'export function login() {\n}\n' + 'const x = 1\n'.repeat(500) + 'export class Auth {\n}\n' }))
+    const res = await $.tool.call({ tool: 'mcp__quota-saver__outline', paths: ['src/auth.ts'] } as never)
+    const text = String((res as { result?: unknown }).result)
+    expect(text).toContain('src/auth.ts: 505 lines, 2 declarations')
+    expect(text).toContain('1  export function login()')
+    expect(text).toContain('503  export class Auth')
+  })
+
+  test('a refused big read points to the outline tool', async ($, on) => {
+    world(on, { files: { '/work/app/big.ts': { size: 500 * 1024, mtimeMs: 1 } } })
+    const res = await $.tool.call({ tool: 'Read', file_path: '/work/app/big.ts' })
+    expect(res.deny).toContain('mcp__quota-saver__outline')
+  })
+
+  test('/quota-saver style full adds the telegraphic style to the system prompt; off removes it', async ($, on) => {
+    world(on)
+    on('prompt.compose', () => ({ sections: [] }))
+    const compose = { model: 'm', promptModel: 'm', surfaces: [], tools: [], outputStyle: null, traits: [] }
+    expect((await run($, 'quota-saver', 'style full')).text).toContain('Reply style: full')
+    expect((await $.prompt.compose(compose)).sections.map(s => s.id)).toContain('quota-saver:style')
+    await run($, 'quota-saver', 'style off')
+    expect((await $.prompt.compose(compose)).sections.map(s => s.id)).not.toContain('quota-saver:style')
+  })
+
+  test('the report shows when the quota fills at this pace', async ($, on) => {
+    const limits = { rateLimits: [{ kind: 'five_hour', percentUsed: 40, resetsAt: new Date(1_000_000 + 3 * 3600_000).toISOString() }] }
+    const { clock } = world(on, { usage: limits })
+    on('turn.complete', () => ({ text: '' }))
+    await $.turn.complete(turnEnd('a'))
+    await clock.advance(10 * 60_000)
+    limits.rateLimits[0]!.percentUsed = 50
+    await $.turn.complete(turnEnd('b'))
+    const res = await run($, 'quota-saver', '')
+    expect(res.text).toContain('5-hour: 50%, full in ~50 min at this pace')
+  })
+})

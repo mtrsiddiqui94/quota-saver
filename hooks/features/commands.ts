@@ -5,6 +5,7 @@ import type { EngineInterface, Hook, On } from 'claude-code'
 import { listLocalModels } from '../lib/local'
 import { parseEntry } from '../lib/memory'
 import type { Dictionary } from '../lib/memory'
+import { humanMinutes, minutesToFull } from '../lib/burn'
 import { formatK, tokens } from '../lib/trim'
 import { record } from '../core/activity'
 import { daily, dayOf, EMPTY_STATS, ensureLoaded, lifetime, saveSettings, state, STORE } from '../core/state'
@@ -29,7 +30,7 @@ const LOCAL_OUTCOME: Record<SetupOutcome, (model: string, how: string, url: stri
 const FAIL = { text: 'quota-saver: this command failed. Please try again.' }
 
 export const COMMANDS = [
-  { name: 'quota-saver', description: 'Token savings report; /quota-saver on or off switches the whole plugin', argumentHint: '[on | off | audit | week | month]' },
+  { name: 'quota-saver', description: 'Token savings report; /quota-saver on or off switches the whole plugin', argumentHint: '[on | off | audit | week | month | style lite|full|off]' },
   { name: 'local', description: 'Local model (Ollama): /local on, auto, off, pick (test and set the team), model <name>', argumentHint: '[on | auto | off | pick | model <name>]' },
   { name: 'shortcut', description: 'Your shortcuts: /shortcut dp = deploy to staging. Then type just "dp" or "#dp"', argumentHint: '[name = meaning]' },
   { name: 'forget', description: 'Forget a shortcut, or clear the saved-answer cache', argumentHint: '[name | cache]' },
@@ -68,6 +69,16 @@ const reportCommand: Hook<'command.run'> = async ($, e) => {
   }
 
   if (arg === 'audit') return { text: formatAudit(await audit($)) }
+  if (arg.startsWith('style')) {
+    const level = arg.split(/\s+/)[1]
+    if (level !== 'off' && level !== 'lite' && level !== 'full') {
+      return { text: `Reply style: ${cfg.style ?? 'off'}. Set it with /quota-saver style lite (shorter), full (telegraphic, fewest output tokens) or off.` }
+    }
+    cfg.style = level
+    await saveSettings($)
+    await record($, 'info', `reply style set to ${level}`)
+    return { text: `Reply style: ${level}. ${level === 'off' ? 'Normal lean replies.' : level === 'lite' ? 'Short, plain replies.' : 'Telegraphic replies; code, paths and errors stay exact.'}` }
+  }
   if (arg === 'week' || arg === 'month') {
     const days = arg === 'week' ? 7 : 30
     const book = await daily($)
@@ -87,7 +98,14 @@ const reportCommand: Hook<'command.run'> = async ($, e) => {
   const life = await lifetime($)
   const { context, rateLimits, cost } = await $.session.usage()
   const label = (kind: string) => (kind === 'five_hour' ? '5-hour' : kind === 'seven_day' ? '7-day' : kind)
-  const limits = rateLimits.map(r => `${label(r.kind)}: ${r.percentUsed}%`)
+  const now = await $.clock.now()
+  const limits = rateLimits.map(r => {
+    const toFull = minutesToFull(state.burn.get(`${r.kind}:${r.resetsAt ?? ''}`) ?? [])
+    const resetIn = r.resetsAt ? Math.max(0, Math.round((Date.parse(r.resetsAt) - now) / 60_000)) : undefined
+    const pace = toFull !== undefined ? `, full in ~${humanMinutes(toFull)} at this pace` : ''
+    const reset = resetIn !== undefined ? `, resets in ${humanMinutes(resetIn)}` : ''
+    return `${label(r.kind)}: ${r.percentUsed}%${pace}${reset}`
+  })
   const lines = [
     'Quota Saver: token savings',
     '',

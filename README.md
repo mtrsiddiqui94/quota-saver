@@ -9,6 +9,8 @@
 | Feature | How it saves |
 |---|---|
 | **Output diet** | Before Bash, web or MCP output enters the conversation (where every later request would re-send it): command-aware filters drop passing tests, progress bars, install chatter and repeated lines; what is still long keeps its head, its error lines and its tail. It changes an output only when that saves 30% or more, and keeps the original in an owner-only folder (`~/.quota-saver/raw`, 3 days), named at the end of the result so Claude reads a line range instead of re-running the command. `QS_RAW=1 <command>` leaves one command's output whole. Error lines are never dropped; file contents (Read) are never cut. |
+| **Outline tool** | `mcp__quota-saver__outline` gives a file's functions, classes, types or headings with line numbers (JS/TS, Python, Go, Rust, Java, Kotlin, C#, Swift, PHP, Ruby, Markdown), so Claude reads only the range it needs instead of the whole file. A refused big read points to it. |
+| **Reply style** | `/quota-saver style lite` (short, plain) or `full` (telegraphic; code, paths and errors stay exact) cuts output tokens, the most expensive kind. Off by default. |
 | **Junk guard** | Whole reads of `node_modules`, `dist`, `build` and other dependency or build folders, lock files and minified bundles are refused once with the reason. Source files are never affected. |
 | **Read guard** | A whole read of a large file is refused once with a hint to search first. A re-read of an unchanged file is refused once. An identical retry always goes through. |
 | **Auto task detection** | "fix the login error", "ye samjhao", "tests chalao": the plugin recognises the kind of task and attaches a short, lean instruction for it. No commands to remember. |
@@ -18,7 +20,7 @@
 | **Smart handoff** | `/new-task` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/last-task` loads the last note in a new session instead of the whole history. |
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
 | **Audit** | `/quota-saver audit` measures what rides on *every* request before your prompt: MCP tool schemas per server, CLAUDE.md and other memory files, skills and agents, and says what to cut. Runs once by itself per context and speaks up only if something is heavy. |
-| **Quota alarm and quota mode** | At 80% and 95% of the 5-hour or weekly limit, a notice says when it resets and how to stretch it. From 90%, with a local model on, general questions go to it by themselves. |
+| **Quota alarm, burn rate and quota mode** | `/quota-saver` shows each limit's use, when it fills at the current pace and when it resets. At 80% and 95% a notice says the same. From 90%, with a local model on, general questions go to it by themselves. |
 | **Model advisor** | The model is the biggest lever on quota. On Opus, a light task (a question, an explanation, running tests, a review) gets one suggestion per context: `/model haiku` or `/model sonnet`, with what switching now would cost in cache. Setting `modelAdvisor`. |
 | **Model-switch warning** | Changing model mid-conversation restarts the prompt cache, re-sending the whole context at full price. The plugin says how many tokens that cost. |
 | **Savings report** | `/quota-saver week` (or `month`): what was saved each day. |
@@ -55,6 +57,7 @@ claude plugin install quota-saver@quota-saver
 | Command | |
 |---|---|
 | `/quota-saver` | Savings report, context and quota |
+| `/quota-saver style lite\|full\|off` | Shorter replies (fewer output tokens) |
 | `/quota-saver audit` | What every request carries (MCP servers, CLAUDE.md, skills) and how to cut it |
 | `/quota-saver week` · `/quota-saver month` | Savings per day |
 | `/quota-saver on` · `/quota-saver off` | Turn the whole plugin on or off (remembered) |
