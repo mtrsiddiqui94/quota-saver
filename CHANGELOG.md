@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.18.0] - 2026-10-21
+
+### Added
+- Roman Urdu words the built-in list misses are learned per person: a word seen in 3 Roman Urdu prompts, and rarely in English ones, counts as Urdu from then on. Common English and coding words are never learned. The activity log shows each word as it is learned.
+
 ## [0.17.3] - 2026-10-21
 
 ### Changed

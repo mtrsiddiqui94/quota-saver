@@ -1,6 +1,6 @@
 {
   "name": "quota-saver",
-  "version": "0.17.3",
+  "version": "0.18.0",
   "description": "Makes your Claude Code quota last longer. English + Roman Urdu prompts.",
   "author": {
     "name": "mtrsiddiqui94"

@@ -11,7 +11,8 @@ import { humanMinutes, minutesToFull } from '../hooks/lib/burn'
 import { junkReason } from '../hooks/lib/junk'
 import { formatOutline, outline } from '../hooks/lib/outline'
 import { routeLocal } from '../hooks/lib/local'
-import { language, replaceWords, userWords } from '../hooks/lib/prompt'
+import { language, replaceWords, useLearned, userWords } from '../hooks/lib/prompt'
+import { learnedWords, learnWords } from '../hooks/lib/learn'
 import { trimOutput } from '../hooks/lib/trim'
 
 test('long output keeps head, tail and error lines', async () => {
@@ -246,4 +247,15 @@ test('chat-style Roman Urdu is recognised, and so is its task', () => {
   expect(detectIntent('home pe aik button lagao')).toBe('build')
   expect(language('is it working')).toBe('English')
   expect(language('what does this function do')).toBe('English')
+})
+
+test('new Roman Urdu words are learned after a few prompts, English ones never', () => {
+  let stats = {}
+  let added: string[] = []
+  for (const t of ['yeh kaam jaldi krwao', 'login ko jaldi kar do', 'jaldi se dekh lo yeh']) ({ stats, added } = learnWords(stats, t))
+  expect(added).toContain('jaldi')
+  expect(learnedWords(stats).has('login')).toBe(false)
+  useLearned(learnedWords(stats))
+  expect(language('jaldi jaldi')).toBe('Roman Urdu')
+  useLearned(new Set())
 })

@@ -14,6 +14,7 @@ export const STORE = {
   settings: 'settings',
   daily: 'daily',
   projectNotes: 'projectNotes',
+  words: 'words',
 } as const
 
 export type Options = {

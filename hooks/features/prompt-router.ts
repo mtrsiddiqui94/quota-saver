@@ -8,7 +8,9 @@
 import type { Args, EngineInterface, On } from 'claude-code'
 
 import { detectIntent, GUIDE, GUIDE_SUMMARY } from '../lib/intent'
-import { language, replaceWords, userWords } from '../lib/prompt'
+import { language, replaceWords, useLearned, userWords } from '../lib/prompt'
+import { learnedWords, learnWords } from '../lib/learn'
+import type { WordStats } from '../lib/learn'
 import { tokens } from '../lib/trim'
 import { embed, routeLocal } from '../lib/local'
 import { EMBED_MODEL } from './local-setup'
@@ -33,6 +35,15 @@ async function countFreeAnswer($: EngineInterface) {
   const baseline = (context.tokens ?? state.lastTurn?.contextTokens ?? 0) + ANSWER_TOKENS
   await count($, { baselineTokens: baseline })
   await record($, 'saved', `this message cost 0 tokens · without Quota Saver it would cost about ${k(baseline)}`)
+}
+
+/** Updates the person's learned Roman Urdu words from this prompt and puts them to use. */
+async function learnLanguage($: EngineInterface, words: string): Promise<string[]> {
+  const old = ((await $.store.get(STORE.words)) ?? {}) as WordStats
+  const { stats, added } = learnWords(old, words)
+  await $.store.set(STORE.words, stats)
+  useLearned(learnedWords(stats))
+  return added
 }
 
 function age(ms: number): string {
@@ -60,6 +71,7 @@ export function installPromptRouter(on: On, opts: Options) {
     const typed = isFresh ? rawWords.slice(1).trim() : rawWords
     const words = expand(typed, dict)
     const hostTokens = tokens(Math.max(0, e.text.length - rawWords.length))
+    const learned = await learnLanguage($, words)
     await record(
       $,
       'prompt',
@@ -67,6 +79,7 @@ export function installPromptRouter(on: On, opts: Options) {
         (hostTokens > 50 ? ` + ${k(hostTokens)} tokens added by the editor` : '') +
         (isFresh ? ' · starts with ! so a fresh answer is fetched' : ''),
     )
+    if (learned.length) await record($, 'info', `learned new Roman Urdu word${learned.length === 1 ? '' : 's'}: ${learned.join(', ')}`)
     if (words !== typed) await record($, 'saved', `your shortcut "${typed}" became "${words.slice(0, 80)}"`)
 
     if (opts.localCache && !e.attachments?.length) {
