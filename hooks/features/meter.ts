@@ -17,7 +17,7 @@ export async function refreshStatus($: EngineInterface) {
   const fiveHour = rateLimits.find(r => r.kind === 'five_hour')
   if (fiveHour) parts.push(`5h ${fiveHour.percentUsed}%`)
   const saved = tokens(session.savedChars)
-  if (saved > 0) parts.push(`bacha ~${formatK(saved)} tok`)
+  if (saved > 0) parts.push(`saved ~${formatK(saved)} tok`)
   $.ui.status(parts.join(' · '))
 
   const pct = context.percent ?? 0
@@ -26,8 +26,8 @@ export async function refreshStatus($: EngineInterface) {
     state.warnedAt = level
     $.ui.toast(
       level >= 85
-        ? `Context ${pct}% bhar gaya. Har message mehnga ho raha hai: /naya-kaam chalayein.`
-        : `Context ${pct}%. Kaam badal rahe hain to /naya-kaam se saaf karein, tokens bachenge.`,
+        ? `Context ${pct}% full. Every message now costs more: run /naya-kaam.`
+        : `Context ${pct}%. Switching tasks? /naya-kaam clears it and saves tokens.`,
     )
   }
 }

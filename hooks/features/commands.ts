@@ -13,21 +13,21 @@ import type { SetupOutcome } from './local-setup'
 import { refreshStatus } from './meter'
 
 const LOCAL_OUTCOME: Record<SetupOutcome, (model: string, how: string, url: string) => string> = {
-  ready: (model, how) => `Local model chalu (${model}). ${how}`,
+  ready: (model, how) => `Local model is on (${model}). ${how}`,
   started: (model, how) =>
-    `Local model setup shuru: Ollama aur "${model}" khud tayyar ho rahe hain (status line par progress). Pehli dafa kuch minute lagenge; tayyar hote hi local mode khud chalu ho jaayega.\n${how}`,
-  running: () => 'Local setup pehle se chal raha hai; status line dekhein.',
-  declined: () => 'Theek hai, kuch install nahi kiya. Jab chahein /local on dobara likhein.',
-  unreachable: (_model, _how, url) => `Ollama ${url} par nahi mila. ollamaUrl setting check karein.`,
+    `Local model setup started: getting Ollama and "${model}" ready. Progress shows in the chat; the first time takes a few minutes. Local mode turns on by itself when ready.\n${how}`,
+  running: () => 'Local setup is already running. Type /local to see where it is.',
+  declined: () => 'OK, nothing was installed. Type /local on whenever you want it.',
+  unreachable: (_model, _how, url) => `No Ollama at ${url}. Check the ollamaUrl setting.`,
 }
 
 export const COMMANDS = [
-  { name: 'quota-saver', description: 'Token bachat ka hisaab; /quota-saver on ya off se poora plugin chalu/band', argumentHint: '[on | off]' },
-  { name: 'local', description: 'Local model (Ollama): /local on, /local auto, /local off, /local model <naam>', argumentHint: '[on | auto | off | model <naam>]' },
-  { name: 'yaad', description: 'Apni dictionary: /yaad dp = staging pe deploy karo. Phir sirf "dp" ya "#dp" likhein', argumentHint: '[naam = matlab]' },
-  { name: 'bhool', description: 'Dictionary se shortcut ya local jawab cache mitao', argumentHint: '[naam | cache]' },
-  { name: 'naya-kaam', description: 'Session ka 12-line khulasa bana kar context saaf karo (sasta /compact + /clear)', argumentHint: '[agla kaam, optional]' },
-  { name: 'wapas', description: 'Pichhle session ka khulasa wapas lao: poori history ke bajaye sirf 12 lines' },
+  { name: 'quota-saver', description: 'Token savings report; /quota-saver on or off switches the whole plugin', argumentHint: '[on | off]' },
+  { name: 'local', description: 'Local model (Ollama): /local on, /local auto, /local off, /local model <name>', argumentHint: '[on | auto | off | model <name>]' },
+  { name: 'yaad', description: 'Your shortcuts: /yaad dp = deploy to staging. Then type just "dp" or "#dp"', argumentHint: '[name = meaning]' },
+  { name: 'bhool', description: 'Forget a shortcut, or clear the saved-answer cache', argumentHint: '[name | cache]' },
+  { name: 'naya-kaam', description: 'Summarise the session in 12 lines and clear the context (a cheap /compact + /clear)', argumentHint: '[next task, optional]' },
+  { name: 'wapas', description: 'Bring back the last session summary: 12 lines instead of the whole history' },
 ] as const
 
 async function getDictionary($: EngineInterface): Promise<Dictionary> {
@@ -42,31 +42,31 @@ export function installCommands(on: On, opts: Options) {
       cfg.isEnabled = arg === 'on'
       await saveSettings($)
       await refreshStatus($).catch(() => undefined)
-      return { text: cfg.isEnabled ? 'Quota Saver chalu: token bachat on.' : 'Quota Saver band: sab kuch normal Claude jaisa. Wapas chalu: /quota-saver on' }
+      return { text: cfg.isEnabled ? 'Quota Saver is on.' : 'Quota Saver is off: everything works as plain Claude. Turn it back on with /quota-saver on' }
     }
 
     const life = await lifetime($)
     const { context, rateLimits, cost } = await $.session.usage()
-    const label = (kind: string) => (kind === 'five_hour' ? '5 ghante' : kind === 'seven_day' ? '7 din' : kind)
+    const label = (kind: string) => (kind === 'five_hour' ? '5-hour' : kind === 'seven_day' ? '7-day' : kind)
     const limits = rateLimits.map(r => `${label(r.kind)}: ${r.percentUsed}%`)
     const lines = [
-      'Quota Saver: token bachat',
+      'Quota Saver: token savings',
       '',
-      `Halat: ${cfg.isEnabled ? 'chalu' : 'BAND (/quota-saver on)'} · local model: ${cfg.local}${cfg.local === 'off' ? '' : ` (${cfg.localModel})`}`,
+      `Status: ${cfg.isEnabled ? 'on' : 'OFF (/quota-saver on)'} · local model: ${cfg.local}${cfg.local === 'off' ? '' : ` (${cfg.localModel})`}`,
       '',
-      `Is session mein: ~${formatK(tokens(session.savedChars))} tokens bache (${session.trims} outputs chhote kiye, ${session.blockedReads} faltu reads roke, ${session.cacheHits} cache jawab, ${session.localAnswers} local model jawab)`,
-      `Ab tak kul:      ~${formatK(tokens(life.savedChars))} tokens bache (${life.trims} outputs, ${life.blockedReads} reads, ${life.cacheHits} cache, ${life.localAnswers} local model)`,
+      `This session: ~${formatK(tokens(session.savedChars))} tokens saved (${session.trims} outputs shortened, ${session.blockedReads} wasteful reads stopped, ${session.cacheHits} saved answers, ${session.localAnswers} local model answers)`,
+      `All time:     ~${formatK(tokens(life.savedChars))} tokens saved (${life.trims} outputs, ${life.blockedReads} reads, ${life.cacheHits} saved answers, ${life.localAnswers} local model)`,
       '',
-      `Context: ${context.percent !== undefined ? `${context.percent}% of ${formatK(context.window)}` : 'abhi koi reading nahi'}`,
+      `Context: ${context.percent !== undefined ? `${context.percent}% of ${formatK(context.window)}` : 'no reading yet'}`,
       ...(limits.length ? [`Quota:   ${limits.join(' · ')}`] : []),
-      ...(cost ? [`Kharcha: $${cost.usd.toFixed(2)}`] : []),
+      ...(cost ? [`Cost:    $${cost.usd.toFixed(2)}`] : []),
       '',
-      'Yaad rakhne ki zaroorat nahi: aam tarah likhein, plugin khud samajh leta hai.',
-      'Kaam badla? /naya-kaam · Kal wapas aaye? /wapas · Shortcut? /yaad · Local model? /local',
-      'Band/chalu: /quota-saver off · /quota-saver on',
+      'Nothing to remember: write normally, the plugin works out the rest.',
+      'New task? /naya-kaam · Back tomorrow? /wapas · Shortcuts? /yaad · Local model? /local',
+      'Off/on: /quota-saver off · /quota-saver on',
     ]
     return { text: lines.join('\n') }
-  }).catch(() => ({ text: 'quota-saver: ye command abhi nahi chal saka. Dobara koshish karein.' }))
+  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
 
   on('command.run', { command: 'local' }, async ($, e) => {
     const { cfg } = state
@@ -76,13 +76,13 @@ export function installCommands(on: On, opts: Options) {
       cfg.local = 'off'
       await saveSettings($)
       await refreshStatus($).catch(() => undefined)
-      return { text: 'Local model band. Sab kuch Claude se.' }
+      return { text: 'Local model is off. Everything goes to Claude.' }
     }
     if (arg === 'on' || arg === 'auto') {
       const how =
         arg === 'on'
-          ? 'Jo prompt ~ se shuru ho (misal: ~docker kya hai) wo aapki machine par chalega, 0 Claude tokens.'
-          : '~ wale prompts ke ilawa aam sawal (jin mein project ya file ka zikr na ho) bhi khud local model par jaayenge.'
+          ? 'Prompts that start with ~ (for example: ~what is docker) run on your machine, 0 Claude tokens.'
+          : 'Besides ~ prompts, general questions (ones that do not mention your project or files) go to the local model by themselves.'
       const outcome = await ensureLocal($, opts, arg)
       await refreshStatus($).catch(() => undefined)
       return { text: LOCAL_OUTCOME[outcome](cfg.localModel, how, opts.ollamaUrl) }
@@ -92,27 +92,27 @@ export function installCommands(on: On, opts: Options) {
       if (!name) return { text: 'Format: /local model qwen2.5:1.5b' }
       cfg.localModel = name
       await saveSettings($)
-      if (cfg.local === 'off') return { text: `Local model ab: ${name}. Chalu karne ke liye: /local on` }
+      if (cfg.local === 'off') return { text: `Local model is now ${name}. Turn it on with /local on` }
       const outcome = await ensureLocal($, opts, cfg.local)
-      return { text: LOCAL_OUTCOME[outcome](name, `Local model ab: ${name}.`, opts.ollamaUrl) }
+      return { text: LOCAL_OUTCOME[outcome](name, `Local model is now ${name}.`, opts.ollamaUrl) }
     }
 
     if (setup.isRunning) {
       const minutes = Math.max(0, Math.round(((await $.clock.now()) - setup.startedAt) / 60000))
       return {
-        text: `Local setup chal raha hai (${minutes} min se).\nAbhi: ${setup.step}${setup.pct === undefined ? '' : ` ${setup.pct}%`}\n\nTayyar hote hi local mode khud chalu ho jaayega. Dobara dekhne ke liye /local likhein.`,
+        text: `Local setup is running (for ${minutes} min).\nNow: ${setup.step}${setup.pct === undefined ? '' : ` ${setup.pct}%`}\n\nLocal mode turns on by itself when it is ready. Type /local again to check.`,
       }
     }
 
     const models = await listLocalModels($, opts.ollamaUrl)
     const header = `Local mode: ${cfg.local} · model: ${cfg.localModel}`
     if (models === undefined) {
-      return { text: `${header}\nOllama abhi nahi chal raha.\n\n/local on likhein: plugin khud Ollama install karega, model download karega aur chalu kar dega.` }
+      return { text: `${header}\nOllama is not running.\n\nType /local on: the plugin installs Ollama, downloads the model and turns it on for you.` }
     }
     return {
-      text: `${header}\nOllama chal raha hai. Models: ${models.join(', ') || 'koi nahi'}${hasModel(models, cfg.localModel) ? '' : `\n"${cfg.localModel}" abhi download nahi hua: /local on se khud ho jaayega.`}\n\n/local on · /local auto · /local off · /local model <naam>`,
+      text: `${header}\nOllama is running. Models: ${models.join(', ') || 'none'}${hasModel(models, cfg.localModel) ? '' : `\n"${cfg.localModel}" is not downloaded yet: /local on downloads it.`}\n\n/local on · /local auto · /local off · /local model <naam>`,
     }
-  }).catch(() => ({ text: 'quota-saver: ye command abhi nahi chal saka. Dobara koshish karein.' }))
+  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
 
   on('command.run', { command: 'yaad' }, async ($, e) => {
     const dict = await getDictionary($)
@@ -121,26 +121,26 @@ export function installCommands(on: On, opts: Options) {
       const names = Object.keys(dict).sort()
       return {
         text: names.length
-          ? `Aapki dictionary (${names.length}):\n${names.map(n => `  ${n} = ${dict[n]}`).join('\n')}\n\nUse: sirf naam likhein, ya jumle mein #naam.`
-          : 'Dictionary khaali hai. Misal: /yaad dp = staging pe deploy karo, pehle tests chalao',
+          ? `Your shortcuts (${names.length}):\n${names.map(n => `  ${n} = ${dict[n]}`).join('\n')}\n\nUse: type just the name, or #name inside a sentence.`
+          : 'No shortcuts yet. Example: /yaad dp = deploy to staging, run the tests first',
       }
     }
     const entry = parseEntry(args)
-    if (!entry) return { text: 'Format: /yaad naam = poora matlab   (naam mein sirf letters, numbers, - ya _)' }
+    if (!entry) return { text: 'Format: /yaad name = full meaning   (the name takes letters, numbers, - and _ only)' }
     await $.store.set(STORE.dictionary, { ...dict, [entry.key]: entry.value })
-    return { text: `Yaad kar liya: "${entry.key}" ya "#${entry.key}" likhne par → ${entry.value}` }
-  }).catch(() => ({ text: 'quota-saver: ye command abhi nahi chal saka. Dobara koshish karein.' }))
+    return { text: `Saved: typing "${entry.key}" or "#${entry.key}" now means → ${entry.value}` }
+  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
 
   on('command.run', { command: 'bhool' }, async ($, e) => {
     const name = e.args.trim().toLowerCase().replace(/^#/, '')
     if (name === 'cache') {
       await $.store.delete(STORE.answers)
-      return { text: 'Local jawab cache saaf kar diya.' }
+      return { text: 'Saved-answer cache cleared.' }
     }
     const dict = await getDictionary($)
-    if (!(name in dict)) return { text: `"${name}" dictionary mein nahi hai. /yaad se list dekhein.` }
+    if (!(name in dict)) return { text: `"${name}" is not a shortcut. Type /yaad to see the list.` }
     const { [name]: _gone, ...rest } = dict
     await $.store.set(STORE.dictionary, rest)
-    return { text: `"${name}" bhool gaya.` }
-  }).catch(() => ({ text: 'quota-saver: ye command abhi nahi chal saka. Dobara koshish karein.' }))
+    return { text: `Forgot "${name}".` }
+  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
 }

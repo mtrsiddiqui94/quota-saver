@@ -138,7 +138,7 @@ describe('local model', () => {
   test('/local on with Ollama ready switches on, and a ~ prompt is answered locally', async ($, on) => {
     const { seen } = world(on, { ollama })
     const res = await run($, 'local', 'on')
-    expect(res.text).toContain('Local model chalu')
+    expect(res.text).toContain('Local model is on')
     const answer = await submit($, '~docker kya hai')
     expect(answer.drop).toContain('Docker ek container tool hai.')
     expect(seen.fetches).toContain('http://localhost:11434/api/chat')
@@ -163,35 +163,35 @@ describe('local model', () => {
   })
 
   test('/local on with no Ollama asks first, and installs nothing on a no', async ($, on) => {
-    const { seen } = world(on, { answer: 'Nahi, abhi nahi' })
+    const { seen } = world(on, { answer: 'Not now' })
     const res = await run($, 'local', 'on')
     expect(seen.asked).toBe(1)
-    expect(res.text).toContain('kuch install nahi kiya')
+    expect(res.text).toContain('nothing was installed')
     expect(seen.commands.some(c => c.includes('install'))).toBe(false)
     await submit($, '~docker kya hai')
     expect(seen.fetches.filter(u => u.endsWith('/api/chat')).length).toBe(0)
   })
 
   test('/local on with no Ollama starts the setup on a yes', async ($, on) => {
-    const { seen } = world(on, { answer: 'Haan, sab khud kar do', host: argv => (argv[0] === 'uname' ? { exitCode: 0, stdout: 'Darwin' } : undefined) })
+    const { seen } = world(on, { answer: 'Yes, set it all up', host: argv => (argv[0] === 'uname' ? { exitCode: 0, stdout: 'Darwin' } : undefined) })
     const res = await run($, 'local', 'on')
-    expect(res.text).toContain('setup shuru')
+    expect(res.text).toContain('setup started')
   })
 
   test('Ollama installed but stopped: no question is asked', async ($, on) => {
     const { seen } = world(on, {
-      answer: 'Nahi',
+      answer: 'No',
       host: argv => (argv[0] === 'uname' ? { exitCode: 0, stdout: 'Darwin' } : argv[1] === '--version' && argv[0] === '/usr/local/bin/ollama' ? { exitCode: 0, stdout: 'ollama 0.12' } : undefined),
     })
     const res = await run($, 'local', 'on')
     expect(seen.asked).toBe(0)
-    expect(res.text).toContain('setup shuru')
+    expect(res.text).toContain('setup started')
   })
 
   test('/local without Ollama explains that /local on does everything', async ($, on) => {
     world(on)
     const res = await run($, 'local', '')
-    expect(res.text).toContain('Ollama abhi nahi chal raha')
+    expect(res.text).toContain('Ollama is not running')
     expect(res.text).toContain('/local on')
   })
 })
@@ -251,7 +251,7 @@ describe('switches and dictionary commands', () => {
   test('/yaad saves, lists and /bhool forgets', async ($, on) => {
     const { seen } = world(on)
     const saved = await run($, 'yaad', 'tc = tests chalao aur failures batao')
-    expect(saved.text).toContain('Yaad kar liya')
+    expect(saved.text).toContain('Saved:')
     const list = await run($, 'yaad', '')
     expect(list.text).toContain('tc = tests chalao aur failures batao')
     await submit($, 'tc')
@@ -271,14 +271,14 @@ describe('switches and dictionary commands', () => {
   test('/quota-saver shows the report', async ($, on) => {
     world(on)
     const res = await run($, 'quota-saver', '')
-    expect(res.text).toContain('Quota Saver: token bachat')
+    expect(res.text).toContain('Quota Saver: token savings')
     expect(res.text).toContain('Context: 25%')
   })
 
   test('/wapas with nothing saved says so', async ($, on) => {
     world(on)
     const res = await run($, 'wapas', '')
-    expect(res.text).toContain('Koi purana khulasa nahi')
+    expect(res.text).toContain('No saved summary')
   })
 })
 

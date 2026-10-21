@@ -103,7 +103,7 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
   if (platform === 'mac') {
     for (const brew of ['brew', '/opt/homebrew/bin/brew', '/usr/local/bin/brew']) {
       if (ok(await run($, [brew, '--version']))) {
-        say($, 'Homebrew se Ollama install ho raha hai')
+        say($, 'Installing Ollama with Homebrew')
         // Each "==> ..." line is a step of brew's (downloading, pouring a dependency, linking).
         const code = await runStreaming(
           $,
@@ -118,7 +118,7 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
         break
       }
     }
-    say($, 'Ollama app download ho raha hai')
+    say($, 'Downloading the Ollama app')
     const zip = `${h}/Downloads/Ollama-darwin.zip`
     return (
       ok(await run($, ['mkdir', '-p', `${h}/Applications`])) &&
@@ -128,7 +128,7 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
   }
 
   if (platform === 'windows') {
-    say($, 'Ollama install ho raha hai (winget)')
+    say($, 'Installing Ollama (winget)')
     const winget = ['winget', 'install', '--id', 'Ollama.Ollama', '-e', '--silent', '--accept-package-agreements', '--accept-source-agreements']
     if (ok(await run($, winget, tenMinutes))) return true
     const setup = `${(await $.env.get('TEMP')) ?? h}\\OllamaSetup.exe`
@@ -138,7 +138,7 @@ export async function installOllama($: EngineInterface, platform: Platform): Pro
     )
   }
 
-  say($, 'Ollama install ho raha hai (install script)')
+  say($, 'Installing Ollama (install script)')
   if (ok(await run($, ['sh', '-c', 'curl -fsSL https://ollama.com/install.sh | sh'], tenMinutes))) return true
   // No root: unpack the official build into ~/.local instead.
   return (
@@ -173,7 +173,7 @@ export async function startServer($: EngineInterface, bin: string, url: string):
 /** Downloads the model, showing progress on the status line. */
 export async function pullModel($: EngineInterface, bin: string, model: string): Promise<boolean> {
   let lastSaid = -10
-  say($, `Model ${model} download shuru (lagbhag 2 GB)`, 0)
+  say($, `Downloading model ${model} (about 2 GB)`, 0)
   const code = await runStreaming($, [bin, 'pull', model], line => {
     const pct = [...line.matchAll(/(\d{1,3})%/g)].map(m => Number(m[1])).at(-1)
     if (pct === undefined) return
@@ -182,7 +182,7 @@ export async function pullModel($: EngineInterface, bin: string, model: string):
     // One line in the conversation every 10%, so progress shows on every surface.
     if (pct >= lastSaid + 10) {
       lastSaid = pct - (pct % 10)
-      say($, `Model ${model} download`, pct)
+      say($, `Downloading model ${model}`, pct)
     }
   })
   $.ui.status(undefined)
@@ -231,10 +231,10 @@ export async function ensureLocal(
   }
   if (!bin && models === undefined && !isConsented) {
     const answer = await $.ui.ask(
-      `Local model ke liye Ollama install karna hoga, aur model "${model}" download hoga (lagbhag 2 GB, ek dafa). Abhi karein?`,
-      { options: ['Haan, sab khud kar do', 'Nahi, abhi nahi'], header: 'Local model' },
-    ).catch(() => 'Nahi')
-    if (!answer.startsWith('Haan')) return 'declined'
+      `The local model needs Ollama installed and the model "${model}" downloaded (about 2 GB, once). Set it up now?`,
+      { options: ['Yes, set it all up', 'Not now'], header: 'Local model' },
+    ).catch(() => 'Not now')
+    if (!answer.startsWith('Yes')) return 'declined'
   }
 
   setup.isRunning = true
@@ -242,32 +242,32 @@ export async function ensureLocal(
   void (async () => {
     try {
       if (!bin) {
-        $.ui.status('quota-saver: Ollama install ho raha hai…')
+        say($, 'Installing Ollama')
         const isInstalled = await installOllama($, platform)
         bin = isInstalled ? await findOllama($, platform) : undefined
         $.ui.status(undefined)
         if (!bin) {
-          $.ui.toast('Ollama install nahi ho saka. ollama.com se khud install kar ke /local on dobara chalayein.')
+          $.ui.toast('Could not install Ollama. Install it from ollama.com, then run /local on again.')
           return
         }
       }
-      say($, 'Ollama server chalu ho raha hai')
+      say($, 'Starting the Ollama server')
       if (!(await startServer($, bin, opts.ollamaUrl))) {
-        $.ui.toast('Ollama server chalu nahi hua. Ek dafa Ollama app khol kar /local on dobara chalayein.')
+        $.ui.toast('The Ollama server did not start. Open the Ollama app once, then run /local on again.')
         return
       }
       const now = await listLocalModels($, opts.ollamaUrl)
       if (!now || !hasModel(now, model)) {
         if (!(await pullModel($, bin, model)) || !hasModel((await listLocalModels($, opts.ollamaUrl)) ?? [], model)) {
-          $.ui.toast(`Model "${model}" download nahi ho saka. Internet check kar ke /local on dobara chalayein.`)
+          $.ui.toast(`Could not download "${model}". Check your internet connection, then run /local on again.`)
           return
         }
       }
       await turnOn()
-      say($, 'Local model tayyar!')
-      $.ui.toast(`Local model tayyar! ${mode === 'on' ? '~ se shuru hone wale prompts' : 'Aam sawal'} ab aapki machine par chalenge, 0 Claude tokens.`)
+      say($, 'Local model is ready!')
+      $.ui.toast(`Local model is ready! ${mode === 'on' ? 'Prompts that start with ~' : 'General questions'} now run on your machine, 0 Claude tokens.`)
     } catch {
-      $.ui.toast('Local setup beech mein ruk gaya. /local on dobara chalayein.')
+      $.ui.toast('Local setup stopped halfway. Run /local on again.')
     } finally {
       setup.isRunning = false
       $.ui.status(undefined)
@@ -292,10 +292,10 @@ export async function autostartLocal($: EngineInterface, opts: Options) {
     if (opts.setupLocalModel === 'ask') {
       void (async () => {
         const answer = await $.ui.ask(
-          'Quota Saver: aam sawal free (aapki machine par) chalane ke liye local model setup karein? Ollama aur ~2 GB model ek dafa download honge.',
-          { options: ['Haan, sab khud kar do', 'Nahi'], header: 'Local model' },
-        ).catch(() => 'Nahi')
-        if (answer.startsWith('Haan')) await ensureLocal($, opts, 'on', true)
+          'Quota Saver: set up a free local model for general questions? It installs Ollama and downloads a ~2 GB model, once.',
+          { options: ['Yes, set it all up', 'No'], header: 'Local model' },
+        ).catch(() => 'No')
+        if (answer.startsWith('Yes')) await ensureLocal($, opts, 'on', true)
       })()
       return
     }

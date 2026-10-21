@@ -47,10 +47,10 @@ VS Code mein Claude ka naya chat kholein, ya terminal mein `claude` chalayein.
 
 ## 5. Local model (optional, free sawal)
 
-Pehle session mein sawal aata hai: **"Local model setup karein?"**
+Pehle session mein English mein sawal aata hai: **"Quota Saver: set up a free local model for general questions?"**
 
-- **Haan, sab khud kar do:** plugin khud Ollama install karta hai (Mac par Homebrew, Windows par winget, Linux par install script), model (~2 GB) download karta hai aur local mode on kar deta hai. Progress status line par dikhti hai, aur poora hone par "Local model tayyar!" aata hai.
-- **Nahi:** baad mein kabhi bhi `/local on` likhein.
+- **Yes, set it all up:** plugin khud Ollama install karta hai (Mac par Homebrew, Windows par winget, Linux par install script), model (~2 GB) download karta hai aur local mode on kar deta hai. Har qadam chat mein ek line ki shakal mein dikhta hai (setup ke dauran `/local` likh kar bhi dekh sakte hain), aur poora hone par "Local model is ready!" aata hai.
+- **No:** baad mein kabhi bhi `/local on` likhein. Ollama pehle se installed ho to dobara install nahi hota: plugin use dhoond kar seedha chalu kar deta hai.
 
 Ye sawal pehle se tay karna ho:
 
@@ -64,7 +64,7 @@ claude plugin install quota-saver@quota-saver --config setupLocalModel=yes
 
 | Likhein | Kya dikhna chahiye |
 |---|---|
-| `/quota-saver` | `Quota Saver: token bachat` aur `Halat: chalu` |
+| `/quota-saver` | `Quota Saver: token savings` aur `Status: on` |
 | `/local` | Ollama aur model ki halat |
 | `/yaad test = tests chalao` phir `test` | Shortcut kaam kar raha hai |
 
@@ -75,10 +75,40 @@ claude plugin marketplace update quota-saver
 claude plugin update quota-saver@quota-saver
 ```
 
-## Band / hatana
+## Band karna / disable / uninstall
 
-- Kuch der ke liye band: `/quota-saver off` (wapas: `/quota-saver on`)
-- Poora hatana: `claude plugin uninstall quota-saver@quota-saver`
+**1. Kuch der ke liye band (plugin installed rehta hai):**
+
+```
+/quota-saver off
+```
+
+Sab kuch normal Claude jaisa chalta hai. Wapas chalu: `/quota-saver on`
+
+Sirf local model band karna ho: `/local off`
+
+**2. Disable (installed rehta hai, bilkul load nahi hota):**
+
+```
+claude plugin disable quota-saver@quota-saver
+```
+
+Wapas: `claude plugin enable quota-saver@quota-saver`
+
+**3. Poora uninstall:**
+
+```
+claude plugin uninstall quota-saver@quota-saver
+claude plugin marketplace remove quota-saver
+```
+
+Pehli line plugin hatati hai, doosri marketplace. Phir naya session kholein.
+
+**4. Ollama bhi hatana ho (optional):** plugin Ollama ko uninstall nahi karta, kyunki wo doosre kaam bhi aa sakta hai.
+
+- Mac (Homebrew): `brew uninstall ollama`, models: `rm -rf ~/.ollama`
+- Windows: Settings → Apps → Ollama → Uninstall
+- Linux: `sudo rm /usr/local/bin/ollama` (ya `~/.local/bin/ollama`), models: `rm -rf ~/.ollama`
 
 ## Masla aaye to
 

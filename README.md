@@ -16,7 +16,7 @@
 | **Local model (Ollama)** | Optional, off by default. General questions run on a model on your machine for **0 Claude tokens**. Project work always goes to Claude. |
 | **Smart handoff** | `/naya-kaam` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/wapas` loads the last note in a new session instead of the whole history. |
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
-| **Meter** | Status line: `quota-saver · ctx 42% · 5h 30% · bacha ~12k tok`, with a nudge at 65% and 85% context. |
+| **Meter** | Status line: `quota-saver · ctx 42% · 5h 30% · saved ~12k tok`, with a nudge at 65% and 85% context. |
 | **Lean rules** | A short system-prompt section: answer first, no recaps, search before reading, small edits. |
 
 ## Install

@@ -1,6 +1,6 @@
 ---
-description: Meri tabdeeliyon ka review karo (git diff). Misal: /jaanch ya /jaanch security
-argument-hint: [optional: kis cheez pe focus]
+description: Review my uncommitted changes (git diff). Example: /jaanch or /jaanch security
+argument-hint: [optional: focus]
 ---
 Review my current uncommitted changes. Focus: $ARGUMENTS
 

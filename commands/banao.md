@@ -1,6 +1,6 @@
 ---
-description: Naya feature ya code banao. Misal: /banao users list pe search box
-argument-hint: [kya banana hai]
+description: Build a feature or code. Example: /banao a search box on the users list
+argument-hint: [what to build]
 ---
 Build this: $ARGUMENTS
 

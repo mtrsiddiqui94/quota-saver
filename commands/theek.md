@@ -1,6 +1,6 @@
 ---
-description: Bug/error theek karo (fix). Misal: /theek login pe 500 error aa raha hai
-argument-hint: [masla ya error]
+description: Fix a bug or error. Example: /theek login returns a 500 error
+argument-hint: [problem or error]
 ---
 Fix this problem: $ARGUMENTS
 

@@ -1,6 +1,6 @@
 ---
-description: Tests chalao aur sirf failures batao. Misal: /test-chalao ya /test-chalao auth
-argument-hint: [optional: kaunse tests]
+description: Run the tests and report only failures. Example: /test-chalao or /test-chalao auth
+argument-hint: [optional: which tests]
 ---
 Run the project's tests. Scope (optional): $ARGUMENTS
 

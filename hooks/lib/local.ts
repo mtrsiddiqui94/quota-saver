@@ -53,13 +53,13 @@ export async function askLocal($: EngineInterface, url: string, model: string, p
       }),
     })
     if (!res.ok) {
-      return { isAnswered: false, reason: res.status === 404 ? `model "${model}" nahi mila: ollama pull ${model}` : `Ollama ne ${res.status} diya` }
+      return { isAnswered: false, reason: res.status === 404 ? `model "${model}" not found: ollama pull ${model}` : `Ollama answered ${res.status}` }
     }
     const body = JSON.parse(res.text) as { message?: { content?: string } }
     const text = body.message?.content?.trim()
-    return text ? { isAnswered: true, text } : { isAnswered: false, reason: 'khaali jawab' }
+    return text ? { isAnswered: true, text } : { isAnswered: false, reason: 'empty answer' }
   } catch {
-    return { isAnswered: false, reason: 'Ollama chal nahi raha (ollama serve)' }
+    return { isAnswered: false, reason: 'Ollama is not running (ollama serve)' }
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "quota-saver",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Makes your Claude Code quota last longer. English + Roman Urdu.",
   "author": {
     "name": "mtrsiddiqui94"
@@ -9,7 +9,7 @@
     "setupLocalModel": {
       "type": "string",
       "title": "Local model (Ollama) setup",
-      "description": "yes: pehle session mein Ollama aur model khud install ho jaayenge, aam sawal free. ask: pehli dafa poochega. no: band (baad mein /local on).",
+      "description": "yes: set up Ollama and the model on the first session, so general questions are free. ask: ask on the first session. no: off (run /local on later).",
       "options": [
         "yes",
         "ask",
@@ -20,37 +20,37 @@
     "maxOutputChars": {
       "type": "number",
       "title": "Max tool output (characters)",
-      "description": "Is se lamba Bash/MCP/web output chhota kar diya jaata hai (errors aur aakhri lines rakh kar).",
+      "description": "Bash, MCP and web output longer than this is shortened (errors and the last lines are kept).",
       "default": 6000
     },
     "maxReadKB": {
       "type": "number",
       "title": "Max full-file read (KB)",
-      "description": "Is se bari file poori parhne se pehle Claude ko Grep ya offset/limit use karne ko kaha jaata hai.",
+      "description": "Before Claude reads a whole file larger than this, it is asked to search or read a line range instead.",
       "default": 80
     },
     "dedupeReads": {
       "type": "boolean",
       "title": "Block repeat reads",
-      "description": "Jo file pehle parh li aur badli nahi, use dobara parhne se roko.",
+      "description": "Stop Claude re-reading a file it already read that has not changed.",
       "default": true
     },
     "autoIntent": {
       "type": "boolean",
       "title": "Auto task detection",
-      "description": "Prompt se kaam ki qism (fix, samjhao, test, review, banao) khud pehchaan kar mukhtasar hidayat saath bhejo.",
+      "description": "Detect the kind of task (fix, explain, test, review, build) and attach a short, lean instruction.",
       "default": true
     },
     "localCache": {
       "type": "boolean",
       "title": "Local answer cache",
-      "description": "Pehle pooche gaye sawal ka jawab local se do (0 tokens). '!' se shuru karein to naya jawab.",
+      "description": "Answer repeated questions from disk (0 tokens). Start a prompt with ! for a fresh answer.",
       "default": true
     },
     "ollamaUrl": {
       "type": "string",
       "title": "Ollama URL",
-      "description": "Local model server ka pata (/local on ke liye).",
+      "description": "Address of the local model server (for /local).",
       "default": "http://localhost:11434"
     }
   }

@@ -52,7 +52,7 @@ export function installHandoff(on: On) {
 
   on('command.run', { command: 'naya-kaam' }, async ($, e) => {
     const note = await makeHandoff($, e.args.trim())
-    if (!note) return { text: 'Khulasa nahi ban saka (session khaali hai ya model ne jawab nahi diya). Seedha /clear kar lein.' }
+    if (!note) return { text: 'Could not write a summary (the session is empty or the model did not answer). Use /clear directly.' }
 
     await $.store.set(STORE.handoff, { note, at: await $.clock.now() })
     state.handoff.pending = note
@@ -62,15 +62,15 @@ export function installHandoff(on: On) {
     )
     return {
       text: isCleared
-        ? `Context saaf. Ye khulasa naye context ke saath jaayega:\n\n${note}`
-        : `Khulasa tayyar hai:\n\n${note}\n\nAb /clear likhein: ye khulasa naye context mein khud chala jaayega.`,
+        ? `Context cleared. This summary carries into the new context:\n\n${note}`
+        : `Summary ready:\n\n${note}\n\nNow type /clear: the summary carries into the new context by itself.`,
     }
-  }).catch(() => ({ text: 'quota-saver: ye command abhi nahi chal saka. Dobara koshish karein.' }))
+  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
 
   on('command.run', { command: 'wapas' }, async $ => {
     const saved = (await $.store.get(STORE.handoff)) as { note?: string } | undefined
-    if (!saved?.note) return { text: 'Koi purana khulasa nahi mila. Pehle kisi session mein /naya-kaam chalayein.' }
+    if (!saved?.note) return { text: 'No saved summary. Run /naya-kaam in a session first.' }
     state.handoff.active = saved.note
-    return { text: `Pichhla khulasa load ho gaya (poori history ke bajaye):\n\n${saved.note}` }
-  }).catch(() => ({ text: 'quota-saver: ye command abhi nahi chal saka. Dobara koshish karein.' }))
+    return { text: `Last summary loaded (instead of the whole history):\n\n${saved.note}` }
+  }).catch(() => ({ text: 'quota-saver: this command failed. Please try again.' }))
 }

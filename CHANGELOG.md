@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-10-21
+
+### Changed
+- Every question, message, command description and setting description is
+  now in English. Prompts in Roman Urdu are still understood, and command
+  names stay as they were.
+- The install guide covers turning off, disabling and uninstalling, and
+  removing Ollama.
+
 ## [0.6.0] - 2026-10-21
 
 ### Added

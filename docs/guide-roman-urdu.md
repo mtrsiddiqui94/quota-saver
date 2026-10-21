@@ -13,7 +13,7 @@ Roman Urdu ya English, jaise chahein likhein. Quota Saver tokens wahan bachata h
 | **Local jawab cache** | Jo sawal pehle pooch chuke hain (aur us waqt koi file nahi badli), us ka jawab local se aata hai: **0 tokens**. Spelling ka farq ("kia ha" / "kya hai") bhi pehchaanta hai. Naya jawab chahiye to shuru mein `!` lagayein. |
 | **Smart handoff** | `/naya-kaam`: sasta model (Haiku) poore session ka 12-line khulasa banata hai, context saaf karta hai, aur khulasa aage le jaata hai. `/wapas` agle din wahi khulasa load karta hai, poori history nahi. |
 | **Sasta explorer** | Codebase mein bari talaash `quota-saver:explorer` agent karta hai, jo sasta model (Haiku) use karta hai. |
-| **Context + quota meter** | Status line mein `ctx 42% · 5h 30% · bacha ~12k tok` dikhta hai. 65% aur 85% par yaad dilata hai. |
+| **Context + quota meter** | Status line mein `ctx 42% · 5h 30% · saved ~12k tok` dikhta hai. 65% aur 85% par yaad dilata hai. |
 | **Lean rules** | Claude ko har dafa chhoti hidayat jaati hai: mukhtasar jawab, recap nahi, search pehle. |
 | **Local model (Ollama)** | Aam sawal ("docker kya hai?") aapki machine ke model par chalte hain: **0 Claude tokens**. Default band hai, `/local on` se chalu hota hai. |
 

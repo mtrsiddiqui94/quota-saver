@@ -19,7 +19,7 @@ const MUTATING = new Set(['Edit', 'Write', 'NotebookEdit', 'MultiEdit', 'Bash', 
 
 function age(ms: number): string {
   const minutes = Math.max(1, Math.round(ms / 60000))
-  return minutes < 60 ? `${minutes} min` : `${Math.round(minutes / 60)} ghante`
+  return minutes < 60 ? `${minutes} min` : `${Math.round(minutes / 60)} h`
 }
 
 export function installPromptRouter(on: On, opts: Options) {
@@ -40,7 +40,7 @@ export function installPromptRouter(on: On, opts: Options) {
       if (hit) {
         await count($, { cacheHits: 1 })
         return {
-          drop: `[quota-saver: local jawab, 0 tokens, ${age(now - hit.at)} purana. Naya jawab chahiye to shuru mein ! lagayein]\n\n${hit.answer}`,
+          drop: `[quota-saver: saved answer, 0 tokens, from ${age(now - hit.at)} ago. Start with ! for a fresh answer]\n\n${hit.answer}`,
         }
       }
       turn.key = key
@@ -48,16 +48,16 @@ export function installPromptRouter(on: On, opts: Options) {
 
     const localPrompt = isFresh ? undefined : routeLocal(text, cfg.local)
     if (localPrompt !== undefined) {
-      $.ui.status(`quota-saver: local model (${cfg.localModel}) soch raha hai…`)
+      $.ui.status(`quota-saver: local model (${cfg.localModel}) is thinking…`)
       const reply = await askLocal($, opts.ollamaUrl, cfg.localModel, localPrompt)
       $.ui.status(undefined)
       if (reply.isAnswered) {
         await count($, { localAnswers: 1 })
         return {
-          drop: `[quota-saver: local model ${cfg.localModel}, 0 Claude tokens. Claude se poochna ho to shuru mein ! lagayein]\n\n${reply.text}`,
+          drop: `[quota-saver: local model ${cfg.localModel}, 0 Claude tokens. Start with ! to ask Claude instead]\n\n${reply.text}`,
         }
       }
-      $.ui.toast(`Local model nahi chala: ${reply.reason}. Claude se jawab le rahe hain.`)
+      $.ui.toast(`Local model failed: ${reply.reason}. Asking Claude instead.`)
     }
 
     const sent = localPrompt ?? text

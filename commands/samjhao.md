@@ -1,6 +1,6 @@
 ---
-description: Code ya concept samjhao (explain), mukhtasar. Misal: /samjhao auth flow kaise kaam karta hai
-argument-hint: [kya samajhna hai]
+description: Explain code or a concept, briefly. Example: /samjhao how the auth flow works
+argument-hint: [what to explain]
 ---
 Explain: $ARGUMENTS
 
