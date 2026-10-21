@@ -17,6 +17,8 @@ export type Settings = {
   localModel: string
   /** The fast model of the local team, for short questions; unset, the strong model answers all. */
   fastModel?: string
+  /** The team's Roman Urdu specialist: Roman Urdu questions go to it first. */
+  urduModel?: string
   /** True once the person picked the model with /local model; until then the default (or what is installed) is used. */
   isModelChosen: boolean
   /** Whether the first-run choice about the local model has been acted on. */

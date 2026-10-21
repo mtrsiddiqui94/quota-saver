@@ -75,6 +75,8 @@ export const state = {
   isAudited: false,
   /** The main loop's model on its last turn, and the context it carried then. */
   lastTurn: undefined as { model: string; contextTokens: number } | undefined,
+  /** Near the quota limit with a local model on: general questions go local by themselves (as /local auto). */
+  isQuotaMode: false,
   /** Quota alarms already raised, as `<window>:<level>`, so each sounds once per reset. */
   quotaWarned: new Set<string>(),
   /** The answer-cache key of the running turn, and whether it changed anything. */

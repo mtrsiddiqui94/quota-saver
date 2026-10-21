@@ -756,3 +756,72 @@ describe('model advisor', () => {
     expect((await run($, 'activity', 'text')).text).toContain('/model sonnet')
   })
 })
+
+const JEST = [
+  ...Array.from({ length: 400 }, (_, i) => `  ✓ renders case ${i} (3 ms)`),
+  '  ✕ submits the form (12 ms)',
+  '    Expected: 200',
+  '    Received: 500',
+  'Tests: 1 failed, 400 passed, 401 total',
+].join('\n')
+
+describe('smarter output diet', () => {
+  const okHost = (argv: readonly string[]) => (argv[0] === 'mkdir' || argv[0] === 'find' ? { exitCode: 0 } : undefined)
+
+  test('a test run keeps the failure and drops the passing tests; the original is kept on disk', async ($, on) => {
+    const written: string[] = []
+    world(on, { host: okHost })
+    on('fs.write', ($$, e) => {
+      written.push(e.path)
+      return { value: undefined }
+    })
+    on('tool.call', { tool: 'Bash' }, () => ({ result: {} as never }))
+    const rows = mock.session(on)
+    await $.tool.call({ tool: 'Bash', command: 'npx jest', tool_use_id: 'tu1' })
+    await $.session.append(toolResultRow('Bash', JEST))
+    const stored = JSON.stringify(rows.appended())
+    expect(stored).toContain('submits the form')
+    expect(stored).toContain('Received: 500')
+    expect(stored).toContain('Tests: 1 failed')
+    expect(stored).not.toContain('renders case 7 ')
+    expect(stored).toContain('saved to /home/u/.quota-saver/raw/tu1.txt')
+    expect(written).toEqual(['/home/u/.quota-saver/raw/tu1.txt'])
+  })
+
+  test('QS_RAW=1 leaves the output whole', async ($, on) => {
+    world(on)
+    on('tool.call', { tool: 'Bash' }, () => ({ result: {} as never }))
+    const rows = mock.session(on)
+    await $.tool.call({ tool: 'Bash', command: 'QS_RAW=1 npx jest', tool_use_id: 'tu1' })
+    await $.session.append(toolResultRow('Bash', JEST))
+    expect(JSON.stringify(rows.appended())).toContain('renders case 7 ')
+  })
+
+  test('when the original cannot be saved, the note says how to get it', async ($, on) => {
+    world(on)
+    const rows = mock.session(on)
+    await $.session.append(toolResultRow('Bash', LONG_LOG))
+    expect(JSON.stringify(rows.appended())).toContain('QS_RAW=1 in front for the full output')
+  })
+
+  test('an output that would shrink by under 30% is left alone', async ($, on) => {
+    world(on)
+    const rows = mock.session(on)
+    const text = Array.from({ length: 60 }, (_, i) => `row ${i}: ${'x'.repeat(60)}`).join('\n')
+    await $.session.append(toolResultRow('Bash', text))
+    expect(JSON.stringify(rows.appended())).not.toContain('quota-saver:')
+  })
+
+  test('near the quota limit with the local model on, general questions go local by themselves', async ($, on) => {
+    const { seen } = world(on, {
+      ollama: ollamaServer(['qwen2.5:1.5b']),
+      usage: { rateLimits: [{ kind: 'five_hour', percentUsed: 93 }] },
+    })
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'local', 'on')
+    await $.turn.complete(turnEnd('a'))
+    const res = await submit($, 'docker kya hai?')
+    expect(res.drop).toContain('Docker ek container tool hai.')
+    expect(seen.prompts.length).toBe(0)
+  })
+})

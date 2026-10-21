@@ -135,6 +135,7 @@ const localCommand: Hook<'command.run'> = async ($, e) => {
     if (!name) return { text: 'Format: /local model qwen3:4b' }
     cfg.localModel = name
     cfg.fastModel = undefined
+    cfg.urduModel = undefined
     cfg.isModelChosen = true
     await saveSettings($)
     if (cfg.local === 'off') return { text: `Local model is now ${name}. Turn it on with /local on` }
@@ -150,7 +151,7 @@ const localCommand: Hook<'command.run'> = async ($, e) => {
   }
 
   const models = await listLocalModels($, ctx.opts.ollamaUrl)
-  const header = `Local mode: ${cfg.local} · team: strong ${cfg.localModel}${cfg.fastModel ? `, fast ${cfg.fastModel}` : ''}`
+  const header = `Local mode: ${cfg.local} · team: strong ${cfg.localModel}${cfg.fastModel ? `, fast ${cfg.fastModel}` : ''}${cfg.urduModel ? `, Roman Urdu ${cfg.urduModel}` : ''}`
   if (models === undefined) {
     return { text: `${header}\nOllama is not running.\n\nType /local on: the plugin installs Ollama, downloads the model and turns it on for you.` }
   }

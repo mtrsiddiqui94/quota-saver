@@ -21,6 +21,7 @@ export async function refreshStatus($: EngineInterface) {
   if (saved > 0) parts.push(`saved ~${formatK(saved)} tok`)
   $.ui.status(parts.join(' · '))
 
+  state.isQuotaMode = state.cfg.local !== 'off' && rateLimits.some(r => r.percentUsed >= 90)
   for (const r of rateLimits) {
     const level = r.percentUsed >= 95 ? 95 : r.percentUsed >= 80 ? 80 : 0
     const key = `${r.kind}:${r.resetsAt ?? ''}:${level}`

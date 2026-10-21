@@ -6,6 +6,7 @@ import { hasModel } from '../hooks/features/local-setup'
 import { compareTurn } from '../hooks/features/compare'
 import { pickTeam, teamOrder } from '../hooks/features/local-team'
 import { judgeReply, stripThinking } from '../hooks/lib/judge'
+import { collapseRepeats, commandKind, filterOutput } from '../hooks/lib/filters'
 import { junkReason } from '../hooks/lib/junk'
 import { routeLocal } from '../hooks/lib/local'
 import { language, replaceWords, userWords } from '../hooks/lib/prompt'
@@ -114,6 +115,8 @@ test('the team order puts the fast model first only for short questions', async 
   expect(teamOrder('docker kya hai?', 'qwen3:4b', 'qwen3:1.7b')).toEqual(['qwen3:1.7b', 'qwen3:4b'])
   expect(teamOrder('x'.repeat(200), 'qwen3:4b', 'qwen3:1.7b')).toEqual(['qwen3:4b', 'qwen3:1.7b'])
   expect(teamOrder('q', 'qwen3:4b', undefined)).toEqual(['qwen3:4b'])
+  expect(teamOrder('docker kya hai? batao', 'qwen3:4b', 'qwen3:1.7b', 'gemma3:4b')).toEqual(['gemma3:4b', 'qwen3:4b'])
+  expect(teamOrder('what is docker?', 'qwen3:4b', 'qwen3:1.7b', 'gemma3:4b')).toEqual(['qwen3:1.7b', 'qwen3:4b'])
 })
 
 test('pickTeam: strong = best answers then larger; fast only when clearly faster', async () => {
@@ -123,6 +126,32 @@ test('pickTeam: strong = best answers then larger; fast only when clearly faster
     { model: 'c:9b', size: 6e9, secs: 40, usable: 3, matched: 3 },
     { model: 'd:2b', size: 2e9, secs: 3, usable: 2, matched: 2 },
   ])
-  expect(team).toEqual({ strong: 'b:4b', fast: 'a:1b' })
+  expect(team).toEqual({ strong: 'b:4b', fast: 'a:1b', urdu: undefined })
+  const withUrdu = pickTeam([
+    { model: 'b:4b', size: 3e9, secs: 6, usable: 3, matched: 2, urduMatched: 0 },
+    { model: 'g:4b', size: 3e9, secs: 7, usable: 3, matched: 2, urduMatched: 2 },
+  ])
+  expect(withUrdu.urdu).toBe('g:4b')
   expect(pickTeam([])).toEqual({})
+})
+
+test('commands are told apart by kind', async () => {
+  expect(commandKind('npx vitest run')).toBe('test')
+  expect(commandKind('cd app && npm test -- auth')).toBe('test')
+  expect(commandKind('pnpm install')).toBe('install')
+  expect(commandKind('pip install -r requirements.txt')).toBe('install')
+  expect(commandKind('npm run build')).toBe('build')
+  expect(commandKind('ls -la')).toBe('other')
+})
+
+test('filters drop noise and passing tests, never errors', async () => {
+  const install = ['npm warn deprecated x', 'reify:lodash: timing reifyNode', 'added 812 packages in 21s', 'npm ERR! code ERESOLVE'].join('\n')
+  const f = filterOutput('npm install', install)
+  expect(f?.text).toContain('npm ERR! code ERESOLVE')
+  expect(f?.text).toContain('added 812 packages')
+  expect(f?.text).not.toContain('reify:')
+  const t = filterOutput('pytest', ['test_a.py::test_one PASSED', 'test_b.py::test_two FAILED', 'AssertionError: 1 != 2'].join('\n'))
+  expect(t?.text).toBe('test_b.py::test_two FAILED\nAssertionError: 1 != 2')
+  expect(collapseRepeats(['a', 'a', 'a', 'b'])).toEqual(['a  [×3]', 'b'])
+  expect(filterOutput('ls', 'one\ntwo')).toBeUndefined()
 })

@@ -80,9 +80,11 @@ export function installPromptRouter(on: On, opts: Options) {
       await record($, 'info', 'not asked before (or changed since) → no saved answer')
     }
 
-    const localPrompt = isFresh ? undefined : routeLocal(words, cfg.local)
+    const mode = state.isQuotaMode && cfg.local === 'on' ? 'auto' : cfg.local
+    if (mode !== cfg.local) await record($, 'info', 'quota nearly used up → general questions go to the local model by themselves')
+    const localPrompt = isFresh ? undefined : routeLocal(words, mode)
     if (localPrompt !== undefined) {
-      const first = teamOrder(localPrompt, cfg.localModel, cfg.fastModel)[0]
+      const first = teamOrder(localPrompt, cfg.localModel, cfg.fastModel, cfg.urduModel)[0]
       $.ui.status(`quota-saver: local model (${first}) is thinking…`)
       await record($, 'local', `no project context needed → asking the local team (${first} first)`)
       const reply = await answerLocally($, opts, localPrompt)

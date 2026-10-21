@@ -13,7 +13,7 @@ import { warnModelSwitch } from './features/model-switch'
 import { installHandoff } from './features/handoff'
 import { autostartLocal } from './features/local-setup'
 import { refreshStatus } from './features/meter'
-import { installOutputDiet } from './features/output-diet'
+import { installOutputDiet, pruneArchive } from './features/output-diet'
 import { installPromptRouter, rememberAnswer } from './features/prompt-router'
 import { installReadGuard } from './features/read-guard'
 import { EXPLORER, installRules } from './features/rules'
@@ -26,6 +26,7 @@ export const register: Register = (on, options) => {
     for (const spec of COMMANDS) await $.command.register(spec)
     await $.agent.register(EXPLORER).catch(() => undefined)
     await autostartLocal($, opts).catch(() => undefined)
+    await pruneArchive($).catch(() => undefined)
     return next(e)
   })
 

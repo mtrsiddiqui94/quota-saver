@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] - 2026-10-21
+
+The best parts of other token savers, combined (credit: context-saver,
+RTK, context-mode, claude-token-efficient, claude-code-llm-router).
+
+### Added
+- Command-aware output filters: passing tests (Jest, Vitest, pytest, cargo,
+  go and others), progress bars, install chatter and repeated lines are
+  dropped before the head/tail cut; error lines never are.
+- The original of a shortened output is kept in an owner-only folder
+  (`~/.quota-saver/raw`, 3 days) and named in the result, so Claude reads a
+  line range instead of re-running the command.
+- `QS_RAW=1 <command>` leaves that command's output whole.
+- Quota mode: from 90% of a limit, with a local model on, general questions
+  go to it by themselves.
+- Lean rules: no openers or praise, stop when the task is done, read the
+  saved original instead of re-running.
+- Local model team: a Roman Urdu specialist, picked by `/local pick`.
+
+### Changed
+- An output is changed only when that saves at least 30%.
+
 ## [0.13.0] - 2026-10-21
 
 ### Added

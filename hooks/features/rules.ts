@@ -17,7 +17,9 @@ The user pays per token and has a limited quota. Work lean:
 - Do not re-read a file already in context unless it changed. Do not re-run a command just to see its output again.
 - Pipe noisy commands (tests, builds, installs) through \`tail\`/\`grep\` and prefer quiet flags.
 - For broad codebase exploration, delegate to the \`quota-saver:explorer\` agent (cheap model) and use its summary.
-- Make changes with Edit (small diffs), not full-file rewrites.`
+- Make changes with Edit (small diffs), not full-file rewrites.
+- No openers or praise ("Great question", "Sure!"), no closing offers of extra work. Stop when the task is done.
+- When an output was shortened, its full text is in the file named at its end: read a line range there instead of re-running the command.`
 
 export const EXPLORER = {
   name: 'explorer',

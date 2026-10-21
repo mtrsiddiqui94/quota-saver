@@ -8,7 +8,7 @@
 
 | Feature | How it saves |
 |---|---|
-| **Output diet** | Long Bash, test, build, web and MCP output is cut to its head, its tail and the lines that look like errors *before* it enters the conversation, so it is not re-sent on every later turn. File contents (Read) are never cut. |
+| **Output diet** | Before Bash, web or MCP output enters the conversation (where every later request would re-send it): command-aware filters drop passing tests, progress bars, install chatter and repeated lines; what is still long keeps its head, its error lines and its tail. It changes an output only when that saves 30% or more, and keeps the original in an owner-only folder (`~/.quota-saver/raw`, 3 days), named at the end of the result so Claude reads a line range instead of re-running the command. `QS_RAW=1 <command>` leaves one command's output whole. Error lines are never dropped; file contents (Read) are never cut. |
 | **Junk guard** | Whole reads of `node_modules`, `dist`, `build` and other dependency or build folders, lock files and minified bundles are refused once with the reason. Source files are never affected. |
 | **Read guard** | A whole read of a large file is refused once with a hint to search first. A re-read of an unchanged file is refused once. An identical retry always goes through. |
 | **Auto task detection** | "fix the login error", "ye samjhao", "tests chalao": the plugin recognises the kind of task and attaches a short, lean instruction for it. No commands to remember. |
@@ -18,12 +18,12 @@
 | **Smart handoff** | `/new-task` has Haiku write a 12-line note of the session, clears the context, and carries the note forward. `/last-task` loads the last note in a new session instead of the whole history. |
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
 | **Audit** | `/quota-saver audit` measures what rides on *every* request before your prompt: MCP tool schemas per server, CLAUDE.md and other memory files, skills and agents, and says what to cut. Runs once by itself per context and speaks up only if something is heavy. |
-| **Quota alarm** | At 80% and 95% of the 5-hour or weekly limit, a notice says when it resets and how to stretch it. |
+| **Quota alarm and quota mode** | At 80% and 95% of the 5-hour or weekly limit, a notice says when it resets and how to stretch it. From 90%, with a local model on, general questions go to it by themselves. |
 | **Model advisor** | The model is the biggest lever on quota. On Opus, a light task (a question, an explanation, running tests, a review) gets one suggestion per context: `/model haiku` or `/model sonnet`, with what switching now would cost in cache. Setting `modelAdvisor`. |
 | **Model-switch warning** | Changing model mid-conversation restarts the prompt cache, re-sending the whole context at full price. The plugin says how many tokens that cost. |
 | **Savings report** | `/quota-saver week` (or `month`): what was saved each day. |
 | **Meter** | Status line: `quota-saver · ctx 42% · 5h 30% · saved ~12k tok`, with a nudge at 65% and 85% context. |
-| **Lean rules** | A short system-prompt section: answer first, no recaps, search before reading, small edits. |
+| **Lean rules** | A short system-prompt section: answer first, no recaps, no openers or praise, stop when done, search before reading, small edits, read the saved original instead of re-running a command. |
 
 ## Install
 
@@ -70,7 +70,7 @@ claude plugin install quota-saver@quota-saver
 
 Every command is also in the `/` menu as `quota-saver:<name>` (for example `/quota-saver:status`, `/quota-saver:activity`), so it shows in editors whose menu lists only file commands. Both forms do the same thing, without a model call.
 
-Prefixes: `!` sends a prompt straight to Claude (skips cache and local model). `~` sends it to the local model when `/local` is on.
+Prefixes: `QS_RAW=1 <command>` (in a command Claude runs) keeps its output whole. `!` sends a prompt straight to Claude (skips cache and local model). `~` sends it to the local model when `/local` is on.
 
 ## Watching it work
 

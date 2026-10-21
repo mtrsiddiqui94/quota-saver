@@ -11,6 +11,7 @@ import type { Options } from '../core/state'
 import { judgeReply } from '../lib/judge'
 import type { Verdict } from '../lib/judge'
 import { askLocal, listLocalModelSizes } from '../lib/local'
+import { language } from '../lib/prompt'
 
 // Past this many characters a question is not "short": the strong model takes it first.
 const SHORT = 120
@@ -19,10 +20,11 @@ export type TeamAnswer =
   | { isAnswered: true; text: string; model: string; secs: number; isLanguageMatch: boolean }
   | { isAnswered: false; reason: string }
 
-/** Who answers first and who gives the second opinion. */
-export function teamOrder(question: string, strong: string, fast: string | undefined): string[] {
-  if (!fast || fast === strong) return [strong]
-  return question.length <= SHORT ? [fast, strong] : [strong, fast]
+/** Who answers first and who gives the second opinion: the Roman Urdu specialist for Roman Urdu, the fast model for short questions, else the strong one. */
+export function teamOrder(question: string, strong: string, fast: string | undefined, urdu?: string): string[] {
+  const first = urdu && language(question) !== 'English' ? urdu : fast && question.length <= SHORT ? fast : strong
+  const rest = [strong, fast, urdu].filter((m): m is string => m !== undefined && m !== first)
+  return [first, ...new Set(rest)].slice(0, 2)
 }
 
 async function timed($: EngineInterface, opts: Options, model: string, question: string) {
@@ -34,7 +36,7 @@ async function timed($: EngineInterface, opts: Options, model: string, question:
 
 export async function answerLocally($: EngineInterface, opts: Options, question: string): Promise<TeamAnswer> {
   const { cfg } = state
-  const order = teamOrder(question, cfg.localModel, cfg.fastModel)
+  const order = teamOrder(question, cfg.localModel, cfg.fastModel, cfg.urduModel)
   let fallback: TeamAnswer | undefined
   const reasons: string[] = []
 
@@ -70,15 +72,24 @@ const PROBES = [
 // Above this average a model is too slow to be worth answering locally.
 const TOO_SLOW_SECS = 25
 
-export type ModelScore = { model: string; size: number; secs: number; usable: number; matched: number }
+export type ModelScore = { model: string; size: number; secs: number; usable: number; matched: number; urduMatched?: number }
 
-/** Picks the team from measured scores: fast = quickest that answered every probe; strong = best answers, then the larger. */
-export function pickTeam(scores: readonly ModelScore[]): { fast?: string; strong?: string } {
+/**
+ * Picks the team from measured scores: strong = best answers, then the larger;
+ * fast = quickest that answered every probe, when clearly faster; Roman Urdu
+ * specialist = most Roman Urdu answers in Roman Urdu, when better than the strong one.
+ */
+export function pickTeam(scores: readonly ModelScore[]): { fast?: string; strong?: string; urdu?: string } {
   const good = scores.filter(s => s.usable === PROBES.length && s.secs <= TOO_SLOW_SECS)
   if (good.length === 0) return {}
   const strong = [...good].sort((a, b) => b.matched - a.matched || b.size - a.size || a.secs - b.secs)[0]
   const fast = [...good].sort((a, b) => a.secs - b.secs || b.matched - a.matched)[0]
-  return { strong: strong?.model, fast: fast && strong && fast.model !== strong.model && fast.secs < strong.secs * 0.7 ? fast.model : undefined }
+  const urdu = [...good].sort((a, b) => (b.urduMatched ?? 0) - (a.urduMatched ?? 0) || a.secs - b.secs)[0]
+  return {
+    strong: strong?.model,
+    fast: fast && strong && fast.model !== strong.model && fast.secs < strong.secs * 0.7 ? fast.model : undefined,
+    urdu: urdu && strong && urdu.model !== strong.model && (urdu.urduMatched ?? 0) > (strong.urduMatched ?? 0) ? urdu.model : undefined,
+  }
 }
 
 /** /local pick: measures every installed model on this machine and sets the team. */
@@ -95,15 +106,19 @@ export async function runPick($: EngineInterface, opts: Options): Promise<string
     let total = 0
     let usable = 0
     let matched = 0
+    let urduMatched = 0
     for (const probe of PROBES) {
       const { reply, secs } = await timed($, opts, m.name, probe)
       total += secs
       if (!reply.isAnswered) continue
       const v = judgeReply(probe, reply.text)
       if (v.isUsable) usable += 1
-      if (v.isUsable && v.isLanguageMatch) matched += 1
+      if (v.isUsable && v.isLanguageMatch) {
+        matched += 1
+        if (language(probe) !== 'English') urduMatched += 1
+      }
     }
-    scores.push({ model: m.name, size: m.size, secs: Math.round((total / PROBES.length) * 10) / 10, usable, matched })
+    scores.push({ model: m.name, size: m.size, secs: Math.round((total / PROBES.length) * 10) / 10, usable, matched, urduMatched })
   }
   $.ui.status(undefined)
 
@@ -116,15 +131,16 @@ export async function runPick($: EngineInterface, opts: Options): Promise<string
   }
   state.cfg.localModel = team.strong
   state.cfg.fastModel = team.fast
+  state.cfg.urduModel = team.urdu
   state.cfg.isModelChosen = true
   await saveSettings($)
-  await record($, 'setup', `team picked: strong ${team.strong}${team.fast ? `, fast ${team.fast}` : ''}`)
+  await record($, 'setup', `team picked: strong ${team.strong}${team.fast ? `, fast ${team.fast}` : ''}${team.urdu ? `, Roman Urdu ${team.urdu}` : ''}`)
   return [
     'Local models on this machine:',
     '',
     ...table,
     '',
-    `Team: strong = ${team.strong}${team.fast ? `, fast = ${team.fast} (short questions)` : ' (answers everything; no model was clearly faster)'}`,
+    `Team: strong = ${team.strong}${team.fast ? `, fast = ${team.fast} (short questions)` : ''}${team.urdu ? `, Roman Urdu = ${team.urdu}` : ''}`,
     'Every local answer is checked; a bad one goes to the other model, then to Claude.',
   ].join('\n')
 }
