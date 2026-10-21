@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.1] - 2026-10-21
+
+### Fixed
+- A model nobody picked by hand is no longer pinned: settings saved by an
+  older version kept its default (`qwen2.5:3b`), which started a 2 GB
+  download although `qwen2.5:1.5b` was installed. `/local model` marks a
+  choice as the person's own.
+- `/local on` uses a good small model that is already installed before
+  downloading another.
+
 ## [0.9.0] - 2026-10-21
 
 ### Added

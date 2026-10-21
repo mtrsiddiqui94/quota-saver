@@ -550,3 +550,22 @@ describe('alarms', () => {
     expect(text.split('5-hour quota 85% used').length - 1).toBe(1)
   })
 })
+
+describe('model choice', () => {
+  test('an old saved default does not trigger a new download when a good model is installed', async ($, on) => {
+    const { seen } = world(on, {
+      ollama: ollamaServer(['qwen2.5:1.5b']),
+      store: { settings: { isEnabled: true, local: 'off', localModel: 'qwen2.5:3b', isOnboarded: true } },
+    })
+    const res = await run($, 'local', 'on')
+    expect(res.text).toContain('Local model is on (qwen2.5:1.5b)')
+    expect(seen.commands.some(c => c.includes('pull'))).toBe(false)
+  })
+
+  test('a model picked by hand is kept, even when another is installed', async ($, on) => {
+    world(on, { ollama: ollamaServer(['qwen2.5:1.5b', 'llama3.2:3b']) })
+    await run($, 'local', 'model llama3.2:3b')
+    const res = await run($, 'local', 'on')
+    expect(res.text).toContain('Local model is on (llama3.2:3b)')
+  })
+})

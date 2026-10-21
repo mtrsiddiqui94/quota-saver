@@ -220,17 +220,24 @@ export async function ensureLocal(
   isConsented = false,
 ): Promise<SetupOutcome> {
   const { cfg } = state
-  const model = cfg.localModel
   const turnOn = async () => {
     cfg.local = mode
     await saveSettings($)
   }
 
   const models = await listLocalModels($, opts.ollamaUrl)
-  if (models !== undefined && hasModel(models, model)) {
+  if (models !== undefined && hasModel(models, cfg.localModel)) {
     await turnOn()
     return 'ready'
   }
+  // Nothing picked by hand and a good small model already installed: use it rather than download another.
+  const installed = models !== undefined && !cfg.isModelChosen ? FALLBACK_MODELS.find(m => hasModel(models, m)) : undefined
+  if (installed) {
+    cfg.localModel = installed
+    await turnOn()
+    return 'ready'
+  }
+  const model = cfg.localModel
   if (setup.isRunning) return 'running'
 
   const platform = await detectPlatform($)

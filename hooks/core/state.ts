@@ -118,7 +118,10 @@ export async function lifetime($: EngineInterface): Promise<Stats> {
 }
 
 export async function loadSettings($: EngineInterface) {
-  Object.assign(state.cfg, DEFAULT_SETTINGS, ((await $.store.get(STORE.settings)) ?? {}) as Partial<Settings>)
+  const saved = ((await $.store.get(STORE.settings)) ?? {}) as Partial<Settings>
+  Object.assign(state.cfg, DEFAULT_SETTINGS, saved)
+  // A model nobody picked is the default of the version that saved it: use today's default instead.
+  if (!saved.isModelChosen) state.cfg.localModel = DEFAULT_SETTINGS.localModel
 }
 
 export async function saveSettings($: EngineInterface) {

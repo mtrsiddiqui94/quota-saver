@@ -13,11 +13,13 @@ export type Settings = {
   /** off: never local. on: prompts starting with ~ go local. auto: also simple general questions. */
   local: LocalMode
   localModel: string
+  /** True once the person picked the model with /local model; until then the default (or what is installed) is used. */
+  isModelChosen: boolean
   /** Whether the first-run choice about the local model has been acted on. */
   isOnboarded: boolean
 }
 
-export const DEFAULT_SETTINGS: Settings = { isEnabled: true, local: 'off', localModel: 'qwen2.5:1.5b', isOnboarded: false }
+export const DEFAULT_SETTINGS: Settings = { isEnabled: true, local: 'off', localModel: 'qwen2.5:1.5b', isModelChosen: false, isOnboarded: false }
 
 const PROJECT_HINT = /[\\/]|\.\w{1,5}\b|`|\b(file|folder|repo|project|codebase|function|class|component|ye|yeh|isko|iska|mera|meri|mere|hamara)\b/i
 const QUESTION = /\?|\b(what|why|how|when|which|kya|kyun|kyon|kaise|kab|kaun|kis|matlab|difference|farq)\b/i

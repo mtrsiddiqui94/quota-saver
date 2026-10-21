@@ -113,6 +113,7 @@ export function installCommands(on: On, opts: Options) {
       const name = rest.join(' ').trim()
       if (!name) return { text: 'Format: /local model qwen2.5:1.5b' }
       cfg.localModel = name
+      cfg.isModelChosen = true
       await saveSettings($)
       if (cfg.local === 'off') return { text: `Local model is now ${name}. Turn it on with /local on` }
       const outcome = await ensureLocal($, opts, cfg.local)
