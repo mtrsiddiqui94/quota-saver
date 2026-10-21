@@ -4,6 +4,7 @@
 import type { On } from 'claude-code'
 
 import { formatK, isBinaryLike, tokens } from '../lib/trim'
+import { record } from '../core/activity'
 import { count, state } from '../core/state'
 import type { Options } from '../core/state'
 
@@ -25,6 +26,14 @@ export function installReadGuard(on: On, opts: Options) {
       if (isRepeat || isHuge) {
         state.refused.add(key)
         await count($, { blockedReads: 1 })
+        const name = path.split(/[\\/]/).pop() ?? path
+        await record(
+          $,
+          'blocked',
+          isRepeat
+            ? `re-read of unchanged ${name} stopped (already in context)`
+            : `whole read of ${name} stopped: ${Math.round(size / 1024)} KB ≈ ${formatK(tokens(size))} tokens; asked to search first`,
+        )
         return {
           deny: isRepeat
             ? `quota-saver: ${path} was already read in this conversation and has not changed since. Use what is already in context. If it truly is no longer visible to you, call Read again with the same arguments and it will go through.`

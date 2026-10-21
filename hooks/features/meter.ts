@@ -3,6 +3,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import { formatK, tokens } from '../lib/trim'
+import { record } from '../core/activity'
 import { state } from '../core/state'
 
 export async function refreshStatus($: EngineInterface) {
@@ -24,6 +25,7 @@ export async function refreshStatus($: EngineInterface) {
   const level = pct >= 85 ? 85 : pct >= 65 ? 65 : 0
   if (level > state.warnedAt) {
     state.warnedAt = level
+    await record($, 'info', `context ${pct}% full: every message re-sends it; /naya-kaam would clear it`)
     $.ui.toast(
       level >= 85
         ? `Context ${pct}% full. Every message now costs more: run /naya-kaam.`

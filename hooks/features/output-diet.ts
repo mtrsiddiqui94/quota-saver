@@ -3,7 +3,8 @@
 
 import type { On } from 'claude-code'
 
-import { isTrimmable, trimOutput } from '../lib/trim'
+import { formatK, isTrimmable, tokens, trimOutput } from '../lib/trim'
+import { record } from '../core/activity'
 import { count, state } from '../core/state'
 import type { Options } from '../core/state'
 
@@ -12,8 +13,10 @@ export function installOutputDiet(on: On, opts: Options) {
     if (!state.cfg.isEnabled || e.origin.kind !== 'tool' || !isTrimmable(e.origin.tool)) return next(e)
 
     let saved = 0
+    let before = 0
     const shorten = (text: string) => {
       const t = trimOutput(text, opts.maxOutputChars)
+      before += text.length
       saved += t.savedChars
       return t.text
     }
@@ -33,6 +36,11 @@ export function installOutputDiet(on: On, opts: Options) {
 
     if (saved === 0) return next(e)
     await count($, { savedChars: saved, trims: 1 })
+    await record(
+      $,
+      'saved',
+      `${e.origin.tool} output ${formatK(before)} → ${formatK(before - saved)} chars (≈ ${formatK(tokens(saved))} tokens saved, errors and last lines kept)`,
+    )
     return next({ ...e, message: { ...e.message, content } })
   }).catch(($, e, next) => next(e))
 }

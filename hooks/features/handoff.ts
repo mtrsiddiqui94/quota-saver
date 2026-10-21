@@ -3,6 +3,7 @@
 
 import type { EngineInterface, On } from 'claude-code'
 
+import { record } from '../core/activity'
 import { resetContext, state, STORE } from '../core/state'
 
 const HANDOFF_SYSTEM = `You compress a coding session into a handoff note so a fresh session can continue with almost no context.
@@ -55,6 +56,7 @@ export function installHandoff(on: On) {
     if (!note) return { text: 'Could not write a summary (the session is empty or the model did not answer). Use /clear directly.' }
 
     await $.store.set(STORE.handoff, { note, at: await $.clock.now() })
+    await record($, 'saved', `session summarised by Haiku into ${note.split('\n').length} lines; context cleared, summary carried forward`)
     state.handoff.pending = note
     const isCleared = await $.command.run({ command: 'clear' }).then(
       () => true,

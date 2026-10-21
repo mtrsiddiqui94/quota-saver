@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-10-21
+
+### Added
+- `/activity on | off | text`: watch what the plugin does on each prompt in a
+  terminal window that opens by itself (macOS Terminal, Windows PowerShell,
+  common Linux terminals), plus a pane where the surface draws one. Off by
+  default; nothing is recorded unless it is on. Shows shortcuts, cache hits,
+  local-model answers, blocked reads, shortened output, the task guide and
+  each turn's real token usage.
+- Model fallbacks: if the chosen model cannot be downloaded, the setup tries
+  `llama3.2:3b`, then `gemma3:1b`.
+
+### Changed
+- macOS installs the official prebuilt Ollama app first (Homebrew compiles
+  from source on Intel Macs and can take an hour); Homebrew is the fallback.
+  The app is opened to run the server, so it keeps running after a session.
+- Default local model is `qwen2.5:1.5b` (about 1 GB, fast on a CPU).
+
 ## [0.7.0] - 2026-10-21
 
 ### Changed

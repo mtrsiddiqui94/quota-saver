@@ -17,7 +17,7 @@ export type Settings = {
   isOnboarded: boolean
 }
 
-export const DEFAULT_SETTINGS: Settings = { isEnabled: true, local: 'off', localModel: 'qwen2.5:3b', isOnboarded: false }
+export const DEFAULT_SETTINGS: Settings = { isEnabled: true, local: 'off', localModel: 'qwen2.5:1.5b', isOnboarded: false }
 
 const PROJECT_HINT = /[\\/]|\.\w{1,5}\b|`|\b(file|folder|repo|project|codebase|function|class|component|ye|yeh|isko|iska|mera|meri|mere|hamara)\b/i
 const QUESTION = /\?|\b(what|why|how|when|which|kya|kyun|kyon|kaise|kab|kaun|kis|matlab|difference|farq)\b/i

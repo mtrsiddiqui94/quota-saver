@@ -1,6 +1,6 @@
 {
   "name": "quota-saver",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Makes your Claude Code quota last longer. English + Roman Urdu.",
   "author": {
     "name": "mtrsiddiqui94"
@@ -53,5 +53,6 @@
       "description": "Address of the local model server (for /local).",
       "default": "http://localhost:11434"
     }
-  }
+  },
+  "types": "./types/index.d.ts"
 }

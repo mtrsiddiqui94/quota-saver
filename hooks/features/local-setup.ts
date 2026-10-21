@@ -4,6 +4,7 @@
 
 import type { EngineInterface } from 'claude-code'
 
+import { record } from '../core/activity'
 import { listLocalModels } from '../lib/local'
 import { saveSettings, state } from '../core/state'
 import type { Options } from '../core/state'
@@ -30,6 +31,7 @@ function say($: EngineInterface, step: string, pct?: number) {
   setup.pct = pct
   $.ui.status(`quota-saver: ${step}${pct === undefined ? '' : ` ${pct}%`}`)
   $.ui.log(`quota-saver: ${step}${pct === undefined ? '' : ` ${pct}%`}`)
+  void record($, 'setup', `${step}${pct === undefined ? '' : ` ${pct}%`}`)
 }
 
 /** Runs a command and hands each line of its output to `onLine`; resolves its exit code, or undefined if it could not start. */
@@ -70,6 +72,66 @@ async function home($: EngineInterface, platform: Platform): Promise<string> {
 /** Where Ollama's binary can be, in the order to try: PATH first, then each platform's install places. */
 export async function ollamaCandidates($: EngineInterface, platform: Platform): Promise<string[]> {
   const h = await home($, platform)
+  if (platform === 'windows') {
+    const local = (await $.env.get('LOCALAPPDATA')) ?? `${h}\\AppData\\Local`
+    return ['ollama', `${local}\\Programs\\Ollama\\ollama.exe`]
+  }
+  if (platform === 'mac') {
+    return [
+      'ollama',
+      '/opt/homebrew/bin/ollama',
+      '/usr/local/bin/ollama',
+      '/Applications/Ollama.app/Contents/Resources/ollama',
+      `${h}/Applications/Ollama.app/Contents/Resources/ollama`,
+    ]
+  }
+  return ['ollama', '/usr/local/bin/ollama', '/usr/bin/ollama', `${h}/.local/bin/ollama`]
+}
+
+export async function findOllama($: EngineInterface, platform: Platform): Promise<string | undefined> {
+  for (const bin of await ollamaCandidates($, platform)) {
+    const r = await run($, [bin, '--version'])
+    if (r && r.exitCode === 0) return bin
+  }
+  return undefined
+}
+
+/** Installs Ollama with the platform's usual tool, falling back to the official download. */
+export async function installOllama($: EngineInterface, platform: Platform): Promise<boolean> {
+  const tenMinutes = 600_000
+  const h = await home($, platform)
+  const ok = (r: Run | undefined) => r !== undefined && r.exitCode === 0
+
+  if (platform === 'mac') {
+    // The official app is prebuilt for Intel and Apple Silicon: a ~200 MB download, nothing to compile.
+    const zip = `${h}/Downloads/Ollama-darwin.zip`
+    say($, 'Downloading the Ollama app (about 200 MB)')
+    if (ok(await run($, ['curl', '-fsSL', '-o', zip, 'https://ollama.com/download/Ollama-darwin.zip'], tenMinutes))) {
+      const dest = ok(await run($, ['test', '-w', '/Applications'])) ? '/Applications' : `${h}/Applications`
+      say($, `Unpacking Ollama into ${dest}`)
+      if (ok(await run($, ['mkdir', '-p', dest])) && ok(await run($, ['unzip', '-q', '-o', zip, '-d', dest], tenMinutes))) {
+        await run($, ['rm', '-f', zip])
+        return true
+      }
+    }
+    for (const brew of ['brew', '/opt/homebrew/bin/brew', '/usr/local/bin/brew']) {
+      if (ok(await run($, [brew, '--version']))) {
+        say($, 'Download failed; installing with Homebrew instead (slow on Intel Macs)')
+        const code = await runStreaming(
+          $,
+          [brew, 'install', 'ollama'],
+          line => {
+            const step = /^==> (.+)/.exec(line)?.[1]
+            if (step) say($, `brew: ${step.slice(0, 120)}`)
+          },
+          { HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' },
+        )
+        return code === 0
+      }
+    }
+    return false
+  }
+
   if (platform === 'windows') {
     const local = (await $.env.get('LOCALAPPDATA')) ?? `${h}\\AppData\\Local`
     return ['ollama', `${local}\\Programs\\Ollama\\ollama.exe`]
@@ -154,7 +216,10 @@ async function isServing($: EngineInterface, url: string): Promise<boolean> {
 /** Starts `ollama serve` for the life of the session (it stops with the session) and waits for it. */
 export async function startServer($: EngineInterface, bin: string, url: string): Promise<boolean> {
   if (await isServing($, url)) return true
-  void (async () => {
+  const app = /^(.*\/Ollama\.app)\//.exec(bin)?.[1]
+  if (app) {
+    await run($, ['open', '-g', app])
+  } else void (async () => {
     try {
       for await (const _ of $.process.spawn({ argv: [bin, 'serve'] })) {
         // drain the server's log; the loop ends with the server
@@ -173,7 +238,7 @@ export async function startServer($: EngineInterface, bin: string, url: string):
 /** Downloads the model, showing progress on the status line. */
 export async function pullModel($: EngineInterface, bin: string, model: string): Promise<boolean> {
   let lastSaid = -10
-  say($, `Downloading model ${model} (about 2 GB)`, 0)
+  say($, `Downloading model ${model}`, 0)
   const code = await runStreaming($, [bin, 'pull', model], line => {
     const pct = [...line.matchAll(/(\d{1,3})%/g)].map(m => Number(m[1])).at(-1)
     if (pct === undefined) return
@@ -200,6 +265,9 @@ export function hasModel(models: readonly string[], model: string): boolean {
  * it is doing; the long part (install, download) runs in the background and
  * reports with a toast.
  */
+/** Small models that run well on a CPU, best first: tried in turn when one fails to download. */
+export const FALLBACK_MODELS = ['qwen2.5:1.5b', 'llama3.2:3b', 'gemma3:1b']
+
 export type SetupOutcome = 'ready' | 'started' | 'running' | 'declined' | 'unreachable'
 
 export async function ensureLocal(
@@ -231,7 +299,7 @@ export async function ensureLocal(
   }
   if (!bin && models === undefined && !isConsented) {
     const answer = await $.ui.ask(
-      `The local model needs Ollama installed and the model "${model}" downloaded (about 2 GB, once). Set it up now?`,
+      `The local model needs Ollama installed and the model "${model}" downloaded (about 1 GB, once). Set it up now?`,
       { options: ['Yes, set it all up', 'Not now'], header: 'Local model' },
     ).catch(() => 'Not now')
     if (!answer.startsWith('Yes')) return 'declined'
@@ -256,12 +324,22 @@ export async function ensureLocal(
         $.ui.toast('The Ollama server did not start. Open the Ollama app once, then run /local on again.')
         return
       }
-      const now = await listLocalModels($, opts.ollamaUrl)
-      if (!now || !hasModel(now, model)) {
-        if (!(await pullModel($, bin, model)) || !hasModel((await listLocalModels($, opts.ollamaUrl)) ?? [], model)) {
-          $.ui.toast(`Could not download "${model}". Check your internet connection, then run /local on again.`)
+      const now = (await listLocalModels($, opts.ollamaUrl)) ?? []
+      if (!hasModel(now, model)) {
+        // Some tags fail to pull on some setups; try the next good small model before giving up.
+        let got: string | undefined
+        for (const candidate of [model, ...FALLBACK_MODELS.filter(m => m !== model)]) {
+          if (candidate !== model) say($, `"${model}" could not be downloaded; trying ${candidate}`)
+          if ((await pullModel($, bin, candidate)) && hasModel((await listLocalModels($, opts.ollamaUrl)) ?? [], candidate)) {
+            got = candidate
+            break
+          }
+        }
+        if (!got) {
+          $.ui.toast(`Could not download a local model. Check your internet connection, then run /local on again.`)
           return
         }
+        cfg.localModel = got
       }
       await turnOn()
       say($, 'Local model is ready!')
@@ -292,7 +370,7 @@ export async function autostartLocal($: EngineInterface, opts: Options) {
     if (opts.setupLocalModel === 'ask') {
       void (async () => {
         const answer = await $.ui.ask(
-          'Quota Saver: set up a free local model for general questions? It installs Ollama and downloads a ~2 GB model, once.',
+          'Quota Saver: set up a free local model for general questions? It installs Ollama and downloads a ~1 GB model, once.',
           { options: ['Yes, set it all up', 'No'], header: 'Local model' },
         ).catch(() => 'No')
         if (answer.startsWith('Yes')) await ensureLocal($, opts, 'on', true)

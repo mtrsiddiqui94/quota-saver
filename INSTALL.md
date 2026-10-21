@@ -49,7 +49,7 @@ VS Code mein Claude ka naya chat kholein, ya terminal mein `claude` chalayein.
 
 Pehle session mein English mein sawal aata hai: **"Quota Saver: set up a free local model for general questions?"**
 
-- **Yes, set it all up:** plugin khud Ollama install karta hai (Mac par Homebrew, Windows par winget, Linux par install script), model (~2 GB) download karta hai aur local mode on kar deta hai. Har qadam chat mein ek line ki shakal mein dikhta hai (setup ke dauran `/local` likh kar bhi dekh sakte hain), aur poora hone par "Local model is ready!" aata hai.
+- **Yes, set it all up:** plugin khud Ollama install karta hai (Mac par official app, Windows par winget, Linux par install script), model (~1 GB) download karta hai aur local mode on kar deta hai. Har qadam chat mein ek line ki shakal mein dikhta hai (setup ke dauran `/local` likh kar bhi dekh sakte hain), aur poora hone par "Local model is ready!" aata hai.
 - **No:** baad mein kabhi bhi `/local on` likhein. Ollama pehle se installed ho to dobara install nahi hota: plugin use dhoond kar seedha chalu kar deta hai.
 
 Ye sawal pehle se tay karna ho:
@@ -67,6 +67,16 @@ claude plugin install quota-saver@quota-saver --config setupLocalModel=yes
 | `/quota-saver` | `Quota Saver: token savings` aur `Status: on` |
 | `/local` | Ollama aur model ki halat |
 | `/yaad test = tests chalao` phir `test` | Shortcut kaam kar raha hai |
+
+## Plugin ko kaam karte dekhna
+
+```
+/activity on
+```
+
+Ek terminal window khulti hai jis mein har prompt par plugin ka har qadam live dikhta hai: shortcut, cache, local model, roki gayi file reads, chhota kiya gaya output, aur har turn ke asal tokens. Band: `/activity off`. Ye default mein band rehta hai, is liye jab nahi dekh rahe to koi bojh nahi.
+
+Window na khule to VS Code terminal mein: `tail -f ~/.quota-saver-activity.log`
 
 ## Update
 
@@ -117,5 +127,5 @@ Pehli line plugin hatati hai, doosri marketplace. Phir naya session kholein.
 | `claude: command not found` | Step 1 ka terminal installer chalayein, phir naya terminal kholein |
 | `Plugin "quota-saver" not found in marketplace` | `claude plugin marketplace update quota-saver`, phir step 3 |
 | Local model "Ollama nahi mila" | `/local on`: plugin khud install karega |
-| Local model dheema hai | `/local model qwen2.5:1.5b` (chhota, tez model) |
+| Local model dheema hai | `/local model gemma3:1b` (aur chhota, tez model) |
 | Plugin ke commands nazar nahi aa rahe | `/reload-plugins`, ya naya session kholein |

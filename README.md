@@ -52,13 +52,29 @@ claude plugin install quota-saver@quota-saver
 | `/quota-saver on` · `/quota-saver off` | Turn the whole plugin on or off (remembered) |
 | `/local` | Local model status and setup steps |
 | `/local on` · `/local auto` · `/local off` | Sets everything up if needed, then `on`: prompts starting with `~` run locally; `auto`: general questions run locally too |
-| `/local model <name>` | Choose the Ollama model (default `qwen2.5:3b`) |
+| `/local model <name>` | Choose the Ollama model (default `qwen2.5:1.5b`) |
+| `/activity on` · `/activity off` · `/activity text` | Watch what the plugin does on each prompt in a live terminal window, stop, or list it here |
 | `/yaad name = meaning` · `/yaad` | Save a shortcut, or list them |
 | `/bhool name` · `/bhool cache` | Forget a shortcut, or clear the answer cache |
 | `/naya-kaam [next task]` · `/wapas` | Handoff across `/clear`, or into a new session |
 | `/theek` `/samjhao` `/test-chalao` `/jaanch` `/banao` `/chhota` | Ready-made lean prompts (optional) |
 
 Prefixes: `!` sends a prompt straight to Claude (skips cache and local model). `~` sends it to the local model when `/local` is on.
+
+## Watching it work
+
+`/activity on` opens a terminal window that shows, live, what the plugin does with each prompt:
+
+```
+07:41:02  PROMPT   "login pe error aa raha hai theek karo"
+07:41:02  INFO     task looks like "fix" → lean fix guide attached (shorter work and reply)
+07:41:02  CLAUDE   sent to Claude
+07:41:09  BLOCKED  whole read of bundle.js stopped: 480 KB ≈ 122.9k tokens; asked to search first
+07:41:15  SAVED    Bash output 52.3k → 5.9k chars (≈ 11.6k tokens saved, errors and last lines kept)
+07:41:31  TURN     turn done (answer): 3.1k new in, 41.2k cached in, 412 out · claude-sonnet-5-5
+```
+
+Recording is off by default and stops with `/activity off`, so it costs nothing when you are not watching. Where no window can open, the reply gives the command to follow the log yourself (`tail -f ~/.quota-saver-activity.log`, or `Get-Content -Wait` on Windows).
 
 ## Settings
 
@@ -86,11 +102,11 @@ How it installs:
 
 | OS | First try | Fallback |
 |---|---|---|
-| macOS | Homebrew (`brew install ollama`) | Official app zip into `~/Applications` |
+| macOS | Official app (prebuilt, ~200 MB) into `/Applications` | Homebrew (slow on Intel Macs: it compiles) |
 | Windows | `winget install Ollama.Ollama` | Official installer, silent |
 | Linux | Official install script | Official build into `~/.local` (no root) |
 
-The model (default `qwen2.5:3b`, about 2 GB) is downloaded once. On a machine without a GPU, `/local model qwen2.5:1.5b` answers faster. While local mode is on, the plugin starts the Ollama server with each session if it is not already running. If anything fails, the prompt goes to Claude and a notice says why.
+The model (default `qwen2.5:1.5b`, about 1 GB) is downloaded once. If it cannot be downloaded, the plugin tries `llama3.2:3b`, then `gemma3:1b`. While local mode is on, the plugin starts the Ollama server with each session if it is not already running. If anything fails, the prompt goes to Claude and a notice says why.
 
 ## Limits
 

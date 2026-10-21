@@ -11,6 +11,7 @@ import { detectIntent, GUIDE } from '../lib/intent'
 import { askLocal, routeLocal } from '../lib/local'
 import { ANSWER_MAX, cacheKey, expand, lookup, remember } from '../lib/memory'
 import type { AnswerCache, Dictionary } from '../lib/memory'
+import { record } from '../core/activity'
 import { count, state, STORE } from '../core/state'
 import type { Options } from '../core/state'
 
@@ -31,7 +32,10 @@ export function installPromptRouter(on: On, opts: Options) {
 
     const dict = ((await $.store.get(STORE.dictionary)) ?? {}) as Dictionary
     const isFresh = e.text.trimStart().startsWith('!')
-    const text = expand(isFresh ? e.text.trimStart().slice(1) : e.text, dict)
+    const original = isFresh ? e.text.trimStart().slice(1) : e.text
+    const text = expand(original, dict)
+    await record($, 'prompt', `"${e.text.slice(0, 80)}"${isFresh ? ' (! = fresh, skip cache and local model)' : ''}`)
+    if (text !== original) await record($, 'saved', `shortcut expanded locally → "${text.slice(0, 80)}"`)
 
     if (opts.localCache && !e.attachments?.length) {
       const key = cacheKey(await $.session.cwd(), text)
@@ -39,6 +43,7 @@ export function installPromptRouter(on: On, opts: Options) {
       const hit = isFresh ? undefined : lookup(((await $.store.get(STORE.answers)) ?? {}) as AnswerCache, key, now)
       if (hit) {
         await count($, { cacheHits: 1 })
+        await record($, 'saved', `answered from the local cache (${age(now - hit.at)} old): 0 tokens, Claude not called`)
         return {
           drop: `[quota-saver: saved answer, 0 tokens, from ${age(now - hit.at)} ago. Start with ! for a fresh answer]\n\n${hit.answer}`,
         }
@@ -49,20 +54,27 @@ export function installPromptRouter(on: On, opts: Options) {
     const localPrompt = isFresh ? undefined : routeLocal(text, cfg.local)
     if (localPrompt !== undefined) {
       $.ui.status(`quota-saver: local model (${cfg.localModel}) is thinking…`)
+      await record($, 'local', `no project context needed → asking local model ${cfg.localModel}`)
+      const startedAt = await $.clock.now()
       const reply = await askLocal($, opts.ollamaUrl, cfg.localModel, localPrompt)
+      const secs = Math.round(((await $.clock.now()) - startedAt) / 100) / 10
       $.ui.status(undefined)
       if (reply.isAnswered) {
         await count($, { localAnswers: 1 })
+        await record($, 'saved', `local model answered in ${secs}s: 0 Claude tokens`)
         return {
           drop: `[quota-saver: local model ${cfg.localModel}, 0 Claude tokens. Start with ! to ask Claude instead]\n\n${reply.text}`,
         }
       }
       $.ui.toast(`Local model failed: ${reply.reason}. Asking Claude instead.`)
+      await record($, 'error', `local model failed (${reply.reason}) → falling back to Claude`)
     }
 
     const sent = localPrompt ?? text
     const intent = opts.autoIntent ? detectIntent(sent) : undefined
     const context = intent ? [...(e.context ?? []), GUIDE[intent]] : e.context
+    if (intent) await record($, 'info', `task looks like "${intent}" → lean ${intent} guide attached (shorter work and reply)`)
+    await record($, 'claude', 'sent to Claude')
     return next({ ...e, text: sent, ...(context ? { context } : {}) })
   }).catch(($, e, next) => next(e))
 

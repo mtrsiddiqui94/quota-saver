@@ -6,6 +6,7 @@ import { listLocalModels } from '../lib/local'
 import { parseEntry } from '../lib/memory'
 import type { Dictionary } from '../lib/memory'
 import { formatK, tokens } from '../lib/trim'
+import { record } from '../core/activity'
 import { lifetime, saveSettings, state, STORE } from '../core/state'
 import type { Options } from '../core/state'
 import { ensureLocal, hasModel, setup } from './local-setup'
@@ -27,6 +28,7 @@ export const COMMANDS = [
   { name: 'yaad', description: 'Your shortcuts: /yaad dp = deploy to staging. Then type just "dp" or "#dp"', argumentHint: '[name = meaning]' },
   { name: 'bhool', description: 'Forget a shortcut, or clear the saved-answer cache', argumentHint: '[name | cache]' },
   { name: 'naya-kaam', description: 'Summarise the session in 12 lines and clear the context (a cheap /compact + /clear)', argumentHint: '[next task, optional]' },
+  { name: 'activity', description: 'Watch what Quota Saver does on each prompt: /activity on opens a live terminal, /activity off stops', argumentHint: '[on | off | text]' },
   { name: 'wapas', description: 'Bring back the last session summary: 12 lines instead of the whole history' },
 ] as const
 
@@ -41,6 +43,7 @@ export function installCommands(on: On, opts: Options) {
     if (arg === 'on' || arg === 'off') {
       cfg.isEnabled = arg === 'on'
       await saveSettings($)
+      await record($, 'info', `Quota Saver switched ${arg}`)
       await refreshStatus($).catch(() => undefined)
       return { text: cfg.isEnabled ? 'Quota Saver is on.' : 'Quota Saver is off: everything works as plain Claude. Turn it back on with /quota-saver on' }
     }

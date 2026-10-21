@@ -126,7 +126,7 @@ describe('prompt router', () => {
 })
 
 describe('local model', () => {
-  const ollama = ollamaServer(['qwen2.5:3b'])
+  const ollama = ollamaServer(['qwen2.5:1.5b'])
 
   test('off by default: a ~ prompt never leaves for Ollama', async ($, on) => {
     const { seen } = world(on, { ollama })
@@ -155,7 +155,7 @@ describe('local model', () => {
   })
 
   test('a local model error falls back to Claude with the ~ removed', async ($, on) => {
-    const { seen } = world(on, { ollama: ollamaServer(['qwen2.5:3b'], '', 500) })
+    const { seen } = world(on, { ollama: ollamaServer(['qwen2.5:1.5b'], '', 500) })
     await run($, 'local', 'on')
     const res = await submit($, '~docker kya hai')
     expect(res.drop).toBeUndefined()
@@ -391,5 +391,49 @@ describe('rules and handoff', () => {
 
     const back = await run($, 'wapas', '')
     expect(back.text).toContain('GOAL: login page')
+  })
+})
+
+describe('activity', () => {
+  test('nothing is recorded until /activity on', async ($, on) => {
+    world(on, { store: { dictionary: { dp: 'deploy to staging' } } })
+    await submit($, 'dp')
+    const list = await run($, 'activity', 'text')
+    expect(list.text).toContain('Nothing recorded yet')
+    expect(list.text).toContain('/activity on')
+  })
+
+  test('/activity on records each step of a prompt, /activity off stops', async ($, on) => {
+    world(on, { store: { dictionary: { dp: 'deploy to staging and fix the error' } } })
+    const res = await run($, 'activity', 'on')
+    expect(res.text).toContain('Activity recording is on')
+    // no terminal can open in the test world: the fallback command is given
+    expect(res.text).toContain('tail -f /home/u/.quota-saver-activity.log')
+
+    await submit($, 'dp')
+    const list = await run($, 'activity', 'text')
+    expect(list.text).toContain('"dp"')
+    expect(list.text).toContain('shortcut expanded locally')
+    expect(list.text).toContain('lean fix guide attached')
+    expect(list.text).toContain('sent to Claude')
+
+    await run($, 'activity', 'off')
+    await submit($, 'second prompt')
+    const after = await run($, 'activity', 'text')
+    expect(after.text).not.toContain('second prompt')
+  })
+
+  test('a blocked read and a cache hit show up as savings', async ($, on) => {
+    const key = cacheKey(CWD, 'auth kaise kaam karta hai')
+    world(on, {
+      store: { answers: { [key]: { answer: 'JWT se.', at: 999_000 } } },
+      files: { '/work/app/big.json': { size: 500 * 1024, mtimeMs: 1 } },
+    })
+    await run($, 'activity', 'on')
+    await submit($, 'auth kaise kaam karta hai')
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/big.json' })
+    const list = await run($, 'activity', 'text')
+    expect(list.text).toContain('answered from the local cache')
+    expect(list.text).toContain('whole read of big.json stopped')
   })
 })
