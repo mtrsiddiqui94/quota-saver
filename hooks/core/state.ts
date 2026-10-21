@@ -45,9 +45,13 @@ export type Stats = {
   blockedReads: number
   cacheHits: number
   localAnswers: number
+  /** Tokens Claude actually processed (API-reported, input and output). */
+  usedTokens: number
+  /** Estimated tokens the same work would have taken without the plugin. */
+  baselineTokens: number
 }
 
-const ZERO: Stats = { savedChars: 0, trims: 0, blockedReads: 0, cacheHits: 0, localAnswers: 0 }
+const ZERO: Stats = { savedChars: 0, trims: 0, blockedReads: 0, cacheHits: 0, localAnswers: 0, usedTokens: 0, baselineTokens: 0 }
 
 // Per-process state. A hot reload starts it over, which only resets counters.
 export const state = {
@@ -68,7 +72,17 @@ export const state = {
   /** Quota alarms already raised, as `<window>:<level>`, so each sounds once per reset. */
   quotaWarned: new Set<string>(),
   /** The answer-cache key of the running turn, and whether it changed anything. */
-  turn: { hasSideEffects: false } as { key?: string; hasSideEffects: boolean },
+  turn: { hasSideEffects: false, toolCalls: 0, keptOutAtStart: 0 } as {
+    key?: string
+    hasSideEffects: boolean
+    /** Main-loop tool calls this turn: each is followed by one more request. */
+    toolCalls: number
+    keptOutAtStart: number
+  },
+  /** Tokens kept out of the live context (shortened output, refused reads): absent from every request from then on. */
+  keptOut: 0,
+  /** Refused reads by key, with the tokens they kept out, until a retry lets them in. */
+  pendingBlocked: new Map<string, number>(),
 }
 
 /** Forgets what belongs to one context window (after /clear or compaction). */
@@ -78,6 +92,8 @@ export function resetContext() {
   state.warnedAt = 0
   state.isAudited = false
   state.lastTurn = undefined
+  state.keptOut = 0
+  state.pendingBlocked.clear()
 }
 
 export type Daily = Record<string, Stats>

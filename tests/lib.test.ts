@@ -3,6 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { detectIntent } from '../hooks/lib/intent'
 import { cacheKey, expand, lookup, normalize, parseEntry, remember } from '../hooks/lib/memory'
 import { hasModel } from '../hooks/features/local-setup'
+import { compareTurn } from '../hooks/features/compare'
 import { junkReason } from '../hooks/lib/junk'
 import { routeLocal } from '../hooks/lib/local'
 import { trimOutput } from '../hooks/lib/trim'
@@ -74,4 +75,10 @@ test('junk paths are told apart from source', async () => {
   expect(junkReason('/p/src/build.ts')).toBeUndefined()
   expect(junkReason('/p/src/distance.ts')).toBeUndefined()
   expect(junkReason('/p/src/index.ts')).toBeUndefined()
+})
+
+test('turn comparison multiplies what was kept out by the requests made', async () => {
+  const usage = { input_tokens: 1_000, output_tokens: 500, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 0, model: 'm' }
+  expect(compareTurn(usage, 0, 10_000, 3)).toEqual({ used: 41_500, baseline: 61_500, saved: 20_000, requests: 4 })
+  expect(compareTurn(usage, 0, 0, 0)).toEqual({ used: 41_500, baseline: 41_500, saved: 0, requests: 1 })
 })

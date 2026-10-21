@@ -8,6 +8,7 @@ import type { Dictionary } from '../lib/memory'
 import { formatK, tokens } from '../lib/trim'
 import { record } from '../core/activity'
 import { daily, dayOf, EMPTY_STATS, lifetime, saveSettings, state, STORE } from '../core/state'
+import type { Stats } from '../core/state'
 import { audit, formatAudit } from './audit'
 import type { Options } from '../core/state'
 import { ensureLocal, hasModel, setup } from './local-setup'
@@ -32,6 +33,16 @@ export const COMMANDS = [
   { name: 'activity', description: 'Watch what Quota Saver does on each prompt: /activity on opens a live terminal, /activity off stops', argumentHint: '[on | off | text]' },
   { name: 'wapas', description: 'Bring back the last session summary: 12 lines instead of the whole history' },
 ] as const
+
+function compareLines(session: Stats, life: Stats): string[] {
+  const line = (label: string, s: Stats) => {
+    if (s.baselineTokens === 0) return undefined
+    const saved = s.baselineTokens - s.usedTokens
+    const pct = Math.round((saved / s.baselineTokens) * 100)
+    return `${label} Claude used ${formatK(s.usedTokens)} tokens · without Quota Saver ≈ ${formatK(s.baselineTokens)} · saved ≈ ${formatK(saved)} (${pct}%)`
+  }
+  return [line('This session:', session), line('All time:    ', life)].filter((x): x is string => x !== undefined)
+}
 
 async function getDictionary($: EngineInterface): Promise<Dictionary> {
   return ((await $.store.get(STORE.dictionary)) ?? {}) as Dictionary
@@ -76,6 +87,7 @@ export function installCommands(on: On, opts: Options) {
       `Status: ${cfg.isEnabled ? 'on' : 'OFF (/quota-saver on)'} · local model: ${cfg.local}${cfg.local === 'off' ? '' : ` (${cfg.localModel})`}`,
       '',
       `This session: ~${formatK(tokens(session.savedChars))} tokens saved (${session.trims} outputs shortened, ${session.blockedReads} wasteful reads stopped, ${session.cacheHits} saved answers, ${session.localAnswers} local model answers)`,
+      ...compareLines(session, life),
       `All time:     ~${formatK(tokens(life.savedChars))} tokens saved (${life.trims} outputs, ${life.blockedReads} reads, ${life.cacheHits} saved answers, ${life.localAnswers} local model)`,
       '',
       `Context: ${context.percent !== undefined ? `${context.percent}% of ${formatK(context.window)}` : 'no reading yet'}`,

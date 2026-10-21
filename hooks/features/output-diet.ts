@@ -36,6 +36,7 @@ export function installOutputDiet(on: On, opts: Options) {
 
     if (saved === 0) return next(e)
     await count($, { savedChars: saved, trims: 1 })
+    state.keptOut += tokens(saved)
     await record(
       $,
       'saved',

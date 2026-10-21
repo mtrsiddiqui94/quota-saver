@@ -8,6 +8,7 @@ import { loadSettings, parseOptions, state } from './core/state'
 import { COMMANDS, installCommands } from './features/commands'
 import { installActivity } from './features/activity'
 import { auditOnce } from './features/audit'
+import { recordTurnCompare } from './features/compare'
 import { warnModelSwitch } from './features/model-switch'
 import { installHandoff } from './features/handoff'
 import { autostartLocal } from './features/local-setup'
@@ -33,6 +34,7 @@ export const register: Register = (on, options) => {
     if (e.agentId === undefined && state.cfg.isEnabled && e.usage) {
       const u = e.usage
       await record($, 'turn', `turn done (${e.reason}): ${k(u.input_tokens)} new in, ${k(u.cache_read_input_tokens)} cached in, ${k(u.output_tokens)} out · ${u.model}`)
+      await recordTurnCompare($, u).catch(() => undefined)
     }
     if (e.agentId === undefined) {
       await rememberAnswer($, e).catch(() => undefined)

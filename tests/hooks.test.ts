@@ -569,3 +569,42 @@ describe('model choice', () => {
     expect(res.text).toContain('Local model is on (llama3.2:3b)')
   })
 })
+
+describe('used vs without the plugin', () => {
+  const usage = { input_tokens: 1_000, output_tokens: 500, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 0, model: 'claude-sonnet-5-5' }
+
+  test('a shortened output is counted once per request of the turn', async ($, on) => {
+    world(on)
+    on('turn.complete', () => ({ text: '' }))
+    on('tool.call', { tool: 'Bash' }, () => ({ result: {} as never }))
+    await run($, 'activity', 'on')
+    await submit($, 'tests chalao')
+    await $.tool.call({ tool: 'Bash', command: 'npm test' })
+    await $.session.append(toolResultRow('Bash', LONG_LOG))
+    await $.tool.call({ tool: 'Bash', command: 'npm test -- auth' })
+    await $.turn.complete({ ...turnEnd('done'), usage })
+    const text = (await run($, 'activity', 'text')).text ?? ''
+    expect(text).toMatch(/used 41\.5k tokens · without Quota Saver ≈ [\d.]+k · saved ≈ [\d.]+k \(\d+%\) over 3 requests/)
+    const report = (await run($, 'quota-saver', '')).text ?? ''
+    expect(report).toContain('This session: Claude used 41.5k tokens · without Quota Saver ≈')
+  })
+
+  test('a refused read that is retried counts as nothing saved', async ($, on) => {
+    world(on, { files: { '/work/app/big.json': { size: 500 * 1024, mtimeMs: 1 } } })
+    on('turn.complete', () => ({ text: '' }))
+    await run($, 'activity', 'on')
+    await submit($, 'big json dekho')
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/big.json' })
+    await $.tool.call({ tool: 'Read', file_path: '/work/app/big.json' })
+    await $.turn.complete({ ...turnEnd('done'), usage })
+    expect((await run($, 'activity', 'text')).text).toContain('without Quota Saver ≈ 41.5k · saved ≈ 0 (0%)')
+  })
+
+  test('a free answer shows 0 used against one request over the context', async ($, on) => {
+    const key = cacheKey(CWD, 'auth kaise kaam karta hai')
+    world(on, { store: { answers: { [key]: { answer: 'JWT se.', at: 999_000 } } } })
+    await run($, 'activity', 'on')
+    await submit($, 'auth kaise kaam karta hai')
+    expect((await run($, 'activity', 'text')).text).toContain('used 0 tokens · without Quota Saver ≈ 50.4k')
+  })
+})

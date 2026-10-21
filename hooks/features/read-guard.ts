@@ -28,6 +28,10 @@ export function installReadGuard(on: On, opts: Options) {
       if (isRepeat || isHuge || junk) {
         state.refused.add(key)
         await count($, { blockedReads: 1 })
+        if (!state.pendingBlocked.has(key)) {
+          state.pendingBlocked.set(key, tokens(size))
+          state.keptOut += tokens(size)
+        }
         const name = path.split(/[\\/]/).pop() ?? path
         await record(
           $,
@@ -53,6 +57,12 @@ export function installReadGuard(on: On, opts: Options) {
 
     const ran = await next(e)
     state.refused.delete(key)
+    const kept = state.pendingBlocked.get(key)
+    if (kept !== undefined && ran.deny === undefined) {
+      // The retry went through: the file is in the context after all.
+      state.keptOut = Math.max(0, state.keptOut - kept)
+      state.pendingBlocked.delete(key)
+    }
     if (ran.deny === undefined && !ran.isError && mtime >= 0) state.seen.set(key, mtime)
     return ran
   }).catch(($, e, next) => next(e))

@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] - 2026-10-21
+
+### Added
+- Used vs without the plugin, per turn in `/activity` and per session and all
+  time in `/quota-saver`: Claude's API-reported tokens set against an estimate
+  that adds back what the plugin kept out of the context, once per request.
+  Free answers (cache, local model) count as one request over the context.
+  Unmeasurable savings are left out, so the estimate errs low.
+
 ## [0.9.1] - 2026-10-21
 
 ### Fixed

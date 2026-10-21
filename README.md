@@ -79,7 +79,10 @@ Prefixes: `!` sends a prompt straight to Claude (skips cache and local model). `
 07:41:09  BLOCKED  whole read of bundle.js stopped: 480 KB ≈ 122.9k tokens; asked to search first
 07:41:15  SAVED    Bash output 52.3k → 5.9k chars (≈ 11.6k tokens saved, errors and last lines kept)
 07:41:31  TURN     turn done (answer): 3.1k new in, 41.2k cached in, 412 out · claude-sonnet-5-5
+07:41:31  TURN     used 44.7k tokens · without Quota Saver ≈ 79.5k · saved ≈ 34.8k (44%) over 3 requests
 ```
+
+**How "without Quota Saver" is worked out.** *Used* is the API's own count. *Without* adds back what the plugin kept out of the context (shortened output, refused reads), once for every request the turn made, because every request re-sends the whole context. A refused read that Claude then retries counts as nothing saved. A prompt answered from the cache or the local model counts as one request over the current context. Savings from the lean rules and task guides cannot be measured and are left out, so the figure errs low. `/quota-saver` shows the same comparison for the session and all time.
 
 Recording is off by default and stops with `/activity off`, so it costs nothing when you are not watching. Where no window can open, the reply gives the command to follow the log yourself (`tail -f ~/.quota-saver-activity.log`, or `Get-Content -Wait` on Windows).
 
