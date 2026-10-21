@@ -68,7 +68,7 @@ claude plugin install quota-saver@quota-saver
 | `/local on` · `/local auto` · `/local off` | Sets everything up if needed, then `on`: prompts starting with `~` run locally; `auto`: general questions run locally too |
 | `/local pick` | Test every installed model here (speed, usable answers, right language) and set the fast and strong models |
 | `/local model <name>` | Use one model for everything |
-| `/activity on` · `/activity off` · `/activity text` | Watch what the plugin does on each prompt in a live terminal window, stop, or list it here |
+| `/activity on` · `off` · `text` · `clear` | Watch what the plugin does on each prompt in a live terminal window, stop, or list it here |
 | `/shortcut name = meaning` · `/shortcut` | Save a shortcut, or list them |
 | `/forget name` · `/forget cache` | Forget a shortcut, or clear the answer cache |
 | `/new-task [next task]` · `/last-task` | Handoff across `/clear`, or into a new session |

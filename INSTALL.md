@@ -77,7 +77,7 @@ claude plugin install quota-saver@quota-saver --config setupLocalModel=yes
 /activity on
 ```
 
-Ek terminal window khulti hai jis mein har prompt par plugin ka har qadam live dikhta hai: shortcut, cache, local model, roki gayi file reads, chhota kiya gaya output, aur har turn ke asal tokens. Har turn ke baad muqabla bhi aata hai: `used 44.7k tokens · without Quota Saver ≈ 79.5k · saved ≈ 34.8k (44%)`. Band: `/activity off`. Ye default mein band rehta hai, is liye jab nahi dekh rahe to koi bojh nahi.
+Ek terminal window khulti hai jis mein har prompt par plugin ka har qadam live dikhta hai: shortcut, cache, local model, roki gayi file reads, chhota kiya gaya output, aur har turn ke asal tokens. Har turn ke baad muqabla bhi aata hai: `used 44.7k tokens · without Quota Saver ≈ 79.5k · saved ≈ 34.8k (44%)`. Band: `/activity off`. Log saaf: `/activity clear`. Ye default mein band rehta hai, is liye jab nahi dekh rahe to koi bojh nahi.
 
 Window na khule to VS Code terminal mein: `tail -f ~/.quota-saver-activity.log`
 

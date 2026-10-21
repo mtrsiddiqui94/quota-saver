@@ -3,7 +3,7 @@
 // the log live (plus a pane where the surface draws one); `/activity off`
 // stops it. Nothing is recorded otherwise.
 
-import { atom, read } from 'claude-code'
+import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Hook, On } from 'claude-code'
 
 import type { ActivityEntry, ActivityKind } from '../../types'
@@ -77,6 +77,12 @@ const activityCommand: Hook<'command.run'> = async ($, e) => {
     return { text: 'Activity recording is off. You can close the activity window.' }
   }
   if (arg === 'text') return { text: await textView($, 40) }
+  if (arg === 'clear') {
+    const { path } = await logTarget($)
+    await update($, activity, () => [])
+    await $.fs.write(path, '').catch(() => undefined)
+    return { text: 'Activity log cleared.' }
+  }
 
   // on, or no argument
   watch.isOn = true
@@ -91,7 +97,7 @@ const activityCommand: Hook<'command.run'> = async ($, e) => {
         : `Could not open a terminal window. Run this in any terminal (VS Code: Ctrl+\`): ${follow}`,
       ...(pane.isPlaced ? ['The activity pane is open here too.'] : []),
       '',
-      'Stop with /activity off. A list here any time: /activity text',
+      'Stop with /activity off. A list here any time: /activity text. Start over: /activity clear',
     ].join('\n'),
   }
 }

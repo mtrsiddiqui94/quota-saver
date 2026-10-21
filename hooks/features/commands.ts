@@ -35,7 +35,7 @@ export const COMMANDS = [
   { name: 'shortcut', description: 'Your shortcuts: /shortcut dp = deploy to staging. Then type just "dp" or "#dp"', argumentHint: '[name = meaning]' },
   { name: 'forget', description: 'Forget a shortcut, or clear the saved-answer cache', argumentHint: '[name | cache]' },
   { name: 'new-task', description: 'Summarise the session in 12 lines and clear the context (a cheap /compact + /clear)', argumentHint: '[next task, optional]' },
-  { name: 'activity', description: 'Watch what Quota Saver does on each prompt: /activity on opens a live terminal, /activity off stops', argumentHint: '[on | off | text]' },
+  { name: 'activity', description: 'Watch what Quota Saver does on each prompt: /activity on opens a live terminal, off stops, clear empties the log', argumentHint: '[on | off | text | clear]' },
   { name: 'last-task', description: 'Bring back the last session summary: 12 lines instead of the whole history' },
 ] as const
 

@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.17.2] - 2026-10-21
+
+### Added
+- `/activity clear` empties the activity log, in the pane and on disk.
+
 ## [0.17.1] - 2026-10-21
 
 ### Changed

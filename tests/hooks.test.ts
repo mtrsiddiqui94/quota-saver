@@ -1011,3 +1011,17 @@ describe('project memory', () => {
     expect(haikuCalls).toBe(0)
   })
 })
+
+test('/activity clear empties the log', async ($, on) => {
+  const written: string[] = []
+  world(on)
+  on('fs.write', ($$, e) => {
+    written.push(`${e.path}=${e.text}`)
+    return { value: undefined }
+  })
+  await run($, 'activity', 'on')
+  await submit($, 'hello there')
+  expect((await run($, 'activity', 'clear')).text).toContain('cleared')
+  expect((await run($, 'activity', 'text')).text).toContain('Nothing recorded yet')
+  expect(written).toContain('/home/u/.quota-saver-activity.log=')
+})
