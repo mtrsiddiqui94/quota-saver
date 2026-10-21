@@ -29,8 +29,21 @@ export function clock(at: number): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
+/** Plain words for each kind of step, as the log window shows them. */
+const LABEL: Partial<Record<ActivityKind, string>> = {
+  prompt: 'YOU',
+  saved: 'SAVED',
+  blocked: 'STOPPED',
+  local: 'LOCAL',
+  claude: 'CLAUDE',
+  turn: 'RESULT',
+  setup: 'SETUP',
+  info: 'NOTE',
+  error: 'ERROR',
+}
+
 export function formatEntry(e: ActivityEntry): string {
-  return `${clock(e.at)}  ${e.kind.toUpperCase().padEnd(7)}  ${e.text}`
+  return `${clock(e.at)}  ${(LABEL[e.kind] ?? e.kind.toUpperCase()).padEnd(7)}  ${e.text}`
 }
 
 /** Records one step. Never throws: the log must not break the feature it describes. */

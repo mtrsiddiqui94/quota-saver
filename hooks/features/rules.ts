@@ -47,7 +47,7 @@ export function installRules(on: On) {
     if (!state.cfg.isEnabled) return composed
     if (watch.isOn && !noted.isDone) {
       noted.isDone = true
-      await record($, 'info', `system prompt: +${tokens(RULES.length)} tokens of lean rules (answer first, no recaps, search before reading, small edits, reply in your language)`)
+      await record($, 'info', `told Claude to keep answers short and read files carefully (+${tokens(RULES.length)} tokens, once per session)`)
     }
     const sections = [...composed.sections, { id: 'quota-saver:rules', text: RULES, scope: 'session' as const }]
     const style = STYLES[state.cfg.style ?? 'off']

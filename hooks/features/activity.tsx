@@ -86,7 +86,7 @@ const activityCommand: Hook<'command.run'> = async ($, e) => {
 
   // on, or no argument
   watch.isOn = true
-  await record($, 'info', 'recording started: each prompt you send shows here, step by step')
+  await record($, 'info', 'log is on: every message you send shows up here, step by step')
   const isWindowOpen = await openTerminal($)
   const pane = await $.ui.open({ id: PANE, title: 'Quota Saver activity' }).catch(() => ({ isPlaced: false as const }))
   return {

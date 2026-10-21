@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.17.3] - 2026-10-21
+
+### Changed
+- The activity log is in plain English: clearer labels (YOU, NOTE, SAVED, STOPPED, RESULT), one line on what each message cost and what was saved, and no lines for steps that did nothing.
+- Chat-style Roman Urdu ("k baad home bnao", "sahi kro", "lagao") is recognised, so its language and task type (build, fix, explain) are picked up.
+
 ## [0.17.2] - 2026-10-21
 
 ### Added

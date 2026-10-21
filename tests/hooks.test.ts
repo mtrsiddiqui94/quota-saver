@@ -423,8 +423,8 @@ describe('activity', () => {
     await submit($, 'dp')
     const list = await run($, 'activity', 'text')
     expect(list.text).toContain('"dp"')
-    expect(list.text).toContain('shortcut expanded locally')
-    expect(list.text).toContain('added a hidden "fix" guide')
+    expect(list.text).toContain('your shortcut "dp" became')
+    expect(list.text).toContain('looks like a "fix" task')
     expect(list.text).toContain('sent to Claude')
 
     await run($, 'activity', 'off')
@@ -443,8 +443,8 @@ describe('activity', () => {
     await submit($, 'auth kaise kaam karta hai')
     await $.tool.call({ tool: 'Read', file_path: '/work/app/big.json' })
     const list = await run($, 'activity', 'text')
-    expect(list.text).toContain('answered from the local cache')
-    expect(list.text).toContain('whole read of big.json stopped')
+    expect(list.text).toContain('so that saved answer was shown')
+    expect(list.text).toContain('stopped Claude reading all of big.json')
   })
 })
 
@@ -530,7 +530,7 @@ describe('alarms', () => {
     await $.turn.complete({ ...turnEnd('b'), usage: usage('claude-haiku-5-5', 0) })
     const list = await run($, 'activity', 'text')
     expect(list.text).toContain('model changed claude-opus-5-5 → claude-haiku-5-5')
-    expect(list.text).toContain('turn done')
+    expect(list.text).toContain('finished and wrote')
   })
 
   test('the same model never warns', async ($, on) => {
@@ -549,7 +549,7 @@ describe('alarms', () => {
     await $.turn.complete(turnEnd('a'))
     await $.turn.complete(turnEnd('b'))
     const text = (await run($, 'activity', 'text')).text ?? ''
-    expect(text.split('5-hour quota 85% used').length - 1).toBe(1)
+    expect(text.split('used 85% of your 5-hour quota').length - 1).toBe(1)
   })
 })
 
@@ -586,7 +586,7 @@ describe('used vs without the plugin', () => {
     await $.tool.call({ tool: 'Bash', command: 'npm test -- auth' })
     await $.turn.complete({ ...turnEnd('done'), usage })
     const text = (await run($, 'activity', 'text')).text ?? ''
-    expect(text).toMatch(/used 41\.5k tokens · without Quota Saver ≈ [\d.]+k · saved ≈ [\d.]+k \(\d+%\) over 3 requests/)
+    expect(text).toMatch(/this message cost 41\.5k tokens .* · Quota Saver saved [\d.]+k \(\d+%\): without it, [\d.]+k/)
     const report = (await run($, 'quota-saver', '')).text ?? ''
     expect(report).toContain('Tokens, this session: Claude used 41.5k tokens · without Quota Saver ≈')
   })
@@ -599,7 +599,7 @@ describe('used vs without the plugin', () => {
     await $.tool.call({ tool: 'Read', file_path: '/work/app/big.json' })
     await $.tool.call({ tool: 'Read', file_path: '/work/app/big.json' })
     await $.turn.complete({ ...turnEnd('done'), usage })
-    expect((await run($, 'activity', 'text')).text).toContain('without Quota Saver ≈ 41.5k · saved ≈ 0 (0%)')
+    expect((await run($, 'activity', 'text')).text).toContain('this message cost 41.5k tokens (1.5k full price, 40.0k at the cheap re-read price) · nothing to save this time')
   })
 
   test('a free answer shows 0 used against one request over the context', async ($, on) => {
@@ -607,7 +607,7 @@ describe('used vs without the plugin', () => {
     world(on, { store: { answers: { [key]: { answer: 'JWT se.', at: 999_000 } } } })
     await run($, 'activity', 'on')
     await submit($, 'auth kaise kaam karta hai')
-    expect((await run($, 'activity', 'text')).text).toContain('used 0 tokens · without Quota Saver ≈ 50.4k')
+    expect((await run($, 'activity', 'text')).text).toContain('this message cost 0 tokens · without Quota Saver it would cost about 50.4k')
   })
 })
 
@@ -622,8 +622,8 @@ describe('editor blocks around the prompt', () => {
     expect(seen.prompts[0]?.text).toBe(full)
     expect(seen.prompts[0]?.context?.join(' ')).toContain('task: build')
     const text = (await run($, 'activity', 'text')).text ?? ''
-    expect(text).toContain('"main aik android game banana chahta hun ideas do" · Roman Urdu')
-    expect(text).toContain('tokens of editor instructions around it')
+    expect(text).toContain('"main aik android game banana chahta hun ideas do" (Roman Urdu')
+    expect(text).toContain('tokens added by the editor')
     expect(text).not.toContain('browser_instruction')
   })
 

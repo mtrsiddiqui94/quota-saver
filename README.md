@@ -99,13 +99,13 @@ With nothing picked by hand, `/local on` makes the best installed models the tea
 `/activity on` opens a terminal window that shows, live, what the plugin does with each prompt:
 
 ```
-07:41:02  PROMPT   "login pe error aa raha hai theek karo"
-07:41:02  INFO     task looks like "fix" → lean fix guide attached (shorter work and reply)
+07:41:02  YOU      "login pe error aa raha hai theek karo" (Roman Urdu, about 12 tokens)
+07:41:02  NOTE     looks like a "fix" task, so Claude got short tips for it (+60 tokens): find the cause, small fix, short reply
 07:41:02  CLAUDE   sent to Claude
-07:41:09  BLOCKED  whole read of bundle.js stopped: 480 KB ≈ 122.9k tokens; asked to search first
-07:41:15  SAVED    Bash output 52.3k → 5.9k chars (≈ 11.6k tokens saved, errors and last lines kept)
-07:41:31  TURN     turn done (answer): 3.1k new in, 41.2k cached in, 412 out · claude-sonnet-5-5
-07:41:31  TURN     used 44.7k tokens · without Quota Saver ≈ 79.5k · saved ≈ 34.8k (44%) over 3 requests
+07:41:09  STOPPED  stopped Claude reading all of bundle.js (about 122.9k tokens) and asked it to search inside first
+07:41:15  SAVED    shortened Bash output, saved about 11.6k tokens (errors and last lines kept; full text kept on disk)
+07:41:31  RESULT   Claude (claude-sonnet-5-5) finished and wrote 412 tokens
+07:41:31  RESULT   this message cost 44.7k tokens (3.5k full price, 41.2k at the cheap re-read price) · Quota Saver saved 34.8k (44%): without it, 79.5k
 ```
 
 **How "without Quota Saver" is worked out.** *Used* is the API's own count. *Without* adds back what the plugin kept out of the context (shortened output, refused reads), once for every request the turn made, because every request re-sends the whole context. A refused read that Claude then retries counts as nothing saved. A prompt answered from the cache or the local model counts as one request over the current context. Savings from the lean rules and task guides cannot be measured and are left out, so the figure errs low. `/quota-saver` shows the same comparison for the session and all time.

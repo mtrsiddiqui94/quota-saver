@@ -6,9 +6,9 @@ export type Intent = 'fix' | 'explain' | 'test' | 'review' | 'build'
 const PATTERNS: ReadonlyArray<[Intent, RegExp]> = [
   ['review', /\b(review|jaanch\w*|janch\w*|check (my|meri|mere) (changes|code|diff)|(diff|code) dekh\w*)/i],
   ['test', /\b(run (the )?tests?|tests? (chal\w*|run kar\w*)|test kar\w*|npm test|pytest)\b/i],
-  ['fix', /\b(fix\w*|bug\w*|errors?|issue|crash\w*|broken|not working|th[ei]+k kar\w*|sahi kar\w*|masla|kaam nahi|chal nahi|nahi chal\w*|ghalat|galat)\b/i],
-  ['explain', /\b(explain\w*|what (does|is)|how (does|do)|why (does|is)|samjh\w*|samaj\w*|bata\w*|kya (hai|karta|karti|hota)|kaise (kaam|chal)|kyun|kyon)\b/i],
-  ['build', /\b(add|create|build|implement|make a|bana\w*|naya|nayi|feature|likh\w*)\b/i],
+  ['fix', /\b(fix\w*|bug\w*|errors?|issue|crash\w*|broken|not working|th[ei]+k (kar|kr)\w*|sahi (kar|kr)\w*|kami\w*|masla|kaam nahi|chal nahi|nahi chal\w*|ghalat|galat)\b/i],
+  ['explain', /\b(explain\w*|what (does|is)|how (does|do)|why (does|is)|samjh\w*|samaj\w*|smjh\w*|bata\w*|kya (hai|karta|karti|hota)|kaise (kaam|chal)|kyun|kyon)\b/i],
+  ['build', /\b(add|create|build|implement|make a|bana\w*|bna\w*|add (kar|kr)\w*|daal\w*|dalo|lagao|lagado|likh (do|kr|kar)\w*|naya|nayi|feature|likh\w*)\b/i],
 ]
 
 export function detectIntent(text: string): Intent | undefined {

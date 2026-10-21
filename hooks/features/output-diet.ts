@@ -154,7 +154,7 @@ export function installOutputDiet(on: On, opts: Options) {
     await record(
       $,
       'saved',
-      `${e.origin.tool} output ${formatK(before)} → ${formatK(after)} chars (≈ ${formatK(tokens(saved))} tokens saved: ${[...new Set(notes)].join(', ')}; original kept on disk)`,
+      `shortened ${e.origin.tool} output, saved about ${formatK(tokens(saved))} tokens (${[...new Set(notes)].join(', ')}; full text kept on disk)`,
     )
     return next({ ...e, message: { ...e.message, content } })
   }).catch(($, e, next) => next(e))

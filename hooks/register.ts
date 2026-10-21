@@ -41,7 +41,7 @@ export const register: Register = (on, options) => {
       await record(
         $,
         'turn',
-        `turn done (${e.reason}) · ${u.model} · in: ${k(u.input_tokens)} new + ${k(u.cache_creation_input_tokens)} written to cache + ${k(u.cache_read_input_tokens)} read from cache (cheap) · out: ${k(u.output_tokens)}`,
+        `Claude (${u.model}) finished and wrote ${k(u.output_tokens)} tokens`,
       )
       await recordTurnCompare($, u).catch(() => undefined)
     }

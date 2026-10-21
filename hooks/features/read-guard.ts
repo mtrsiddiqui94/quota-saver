@@ -37,10 +37,10 @@ export function installReadGuard(on: On, opts: Options) {
           $,
           'blocked',
           isRepeat
-            ? `re-read of unchanged ${name} stopped (already in context)`
+            ? `stopped Claude reading ${name} again (it already has it)`
             : junk
-              ? `read of ${name} stopped: ${junk}, ${Math.round(size / 1024)} KB ≈ ${formatK(tokens(size))} tokens`
-              : `whole read of ${name} stopped: ${Math.round(size / 1024)} KB ≈ ${formatK(tokens(size))} tokens; asked to search first`,
+              ? `stopped Claude reading ${name} (${junk}, about ${formatK(tokens(size))} tokens)`
+              : `stopped Claude reading all of ${name} (about ${formatK(tokens(size))} tokens) and asked it to search inside first`,
         )
         if (junk && !isRepeat) {
           return {

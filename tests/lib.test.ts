@@ -237,3 +237,13 @@ test('the team is made from what is installed, best first', async () => {
   expect(teamFromInstalled(['qwen3:1.7b'])).toEqual({ strong: 'qwen3:1.7b', fast: undefined })
   expect(teamFromInstalled(['all-minilm'])).toEqual({ strong: undefined, fast: undefined })
 })
+
+test('chat-style Roman Urdu is recognised, and so is its task', () => {
+  expect(language('login page k baad home bnao jismain curent month ka calender ban jae')).toBe('Roman Urdu')
+  expect(detectIntent('login page k baad home bnao jismain curent month ka calender ban jae')).toBe('build')
+  expect(detectIntent('ab jo jo kami ha wo sahi kro')).toBe('fix')
+  expect(language('to jo jo new words aen unko dalo or thik karo push karo')).toBe('Roman Urdu')
+  expect(detectIntent('home pe aik button lagao')).toBe('build')
+  expect(language('is it working')).toBe('English')
+  expect(language('what does this function do')).toBe('English')
+})

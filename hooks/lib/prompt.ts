@@ -18,7 +18,7 @@ export function replaceWords(text: string, words: string, replacement: string): 
   return at < 0 ? text : text.slice(0, at) + replacement + text.slice(at + words.length)
 }
 
-const ROMAN_URDU = /\b(hai|hain|ha|kya|kia|kaise|kese|karo|kar|karna|mein|main|ma|aur|nahi|ni|batao|bata|chahiye|chahta|chaya|hun|ho|ye|wo|ka|ki|ke|ko|se|par|pe|aik|ek|bhi|sab|kuch|abhi|jab|tab|agar|ager)\b/gi
+const ROMAN_URDU = /\b(hai|hain|ha|kya|kia|kaise|kese|karo|kar|karna|mein|main|ma|aur|nahi|ni|batao|bata|chahiye|chahta|chaya|hun|ho|ye|wo|ka|ki|ke|ko|se|par|pe|aik|ek|bhi|sab|kuch|abhi|jab|tab|agar|ager|k|q|baad|jis\w*|jo|jae|jaye|jaey|jao|ja|bna\w*|bana\w*|kro|kr|krna|krdo|kardo|kard\w*|krd\w*|dena|ab|phir|fir|isko|usko|mujhe|muje|hum|tum|ap|aap|wala|wali|wale|raha|rahi|rha|rhi|ra|lag|lagta|lagti|sath|saath|tak|sahi|theek|thik|bht|bohat|bahut|kyun|kyu|kun|dekho|dikh\w*|chal\w*|samjhao|samjha\w*|hy|kab|kahan|kidhar|idhar|udhar|yahan|wahan|apna|apni|apne|mera|meri|mere|tera|teri|hamara|unka|inka|sakta|sakti|sakte|skta|chahye|chaiye|chahie|zara|zaroor|bilkul|acha|achha|ghalat|galat|masla|kaam|cheez\w*|wajah|waja|lekin|magar|yaa|phr|dobara|doobara|pehle|pehly|abi|sirf|bas|zyada|ziada|thora|thoda|bohot|bhot|kitna|kitne|kitni|kaun|kon|kis|kisi|koi|hoga|hogi|hoge|hota|hoti|hote|tha|thi|rahe|rhe|gaya|gayi|gya|gyi|gae|diya|dia|dya|liya|lia|kiya|karen|karein|kren|krein|dekh|dekhna|bolo|likho|hatao|nikalo|lagao|lagado|dalo|daalo|rakho|aya|aaya|ayi|aayi|aen|ayen|na)\b/gi
 
 /** A rough label for the reply language Claude will pick. */
 export function language(text: string): 'Roman Urdu' | 'English' | 'mixed' {

@@ -32,7 +32,7 @@ async function countFreeAnswer($: EngineInterface) {
   const { context } = await $.session.usage()
   const baseline = (context.tokens ?? state.lastTurn?.contextTokens ?? 0) + ANSWER_TOKENS
   await count($, { baselineTokens: baseline })
-  await record($, 'saved', `used 0 tokens · without Quota Saver ≈ ${k(baseline)} (one request over the current context)`)
+  await record($, 'saved', `this message cost 0 tokens · without Quota Saver it would cost about ${k(baseline)}`)
 }
 
 function age(ms: number): string {
@@ -63,11 +63,11 @@ export function installPromptRouter(on: On, opts: Options) {
     await record(
       $,
       'prompt',
-      `"${words.slice(0, 100)}" · ${language(words)}, ${words.split(' ').filter(Boolean).length} words, ≈ ${k(tokens(words.length))} tokens` +
-        (hostTokens > 50 ? ` · plus ≈ ${k(hostTokens)} tokens of editor instructions around it, sent as they are` : '') +
-        (isFresh ? ' · ! = fresh: cache and local model skipped' : ''),
+      `"${words.slice(0, 100)}" (${language(words)}, about ${k(tokens(words.length))} tokens)` +
+        (hostTokens > 50 ? ` + ${k(hostTokens)} tokens added by the editor` : '') +
+        (isFresh ? ' · starts with ! so a fresh answer is fetched' : ''),
     )
-    if (words !== typed) await record($, 'saved', `shortcut expanded locally: "${typed}" → "${words.slice(0, 80)}"`)
+    if (words !== typed) await record($, 'saved', `your shortcut "${typed}" became "${words.slice(0, 80)}"`)
 
     if (opts.localCache && !e.attachments?.length) {
       const key = cacheKey(await $.session.cwd(), words)
@@ -76,7 +76,7 @@ export function installPromptRouter(on: On, opts: Options) {
       if (hit) {
         await countFreeAnswer($)
         await count($, { cacheHits: 1 })
-        await record($, 'saved', `answered from the local cache (${age(now - hit.at)} old): 0 tokens, Claude not called`)
+        await record($, 'saved', `same question was answered ${age(now - hit.at)} ago, so that saved answer was shown and Claude was not used`)
         return {
           drop: `[quota-saver: saved answer, 0 tokens, from ${age(now - hit.at)} ago. Start with ! for a fresh answer]\n\n${hit.answer}`,
         }
@@ -94,37 +94,34 @@ export function installPromptRouter(on: On, opts: Options) {
           if (near) {
             await countFreeAnswer($)
             await count($, { cacheHits: 1 })
-            await record($, 'saved', `answered from the local cache: a similar question (${Math.round(near.score * 100)}% alike) was answered ${age(now - near.hit.at)} ago; 0 tokens`)
+            await record($, 'saved', `a very similar question (${Math.round(near.score * 100)}% alike) was answered ${age(now - near.hit.at)} ago, so that saved answer was shown and Claude was not used`)
             return {
               drop: `[quota-saver: saved answer to a similar question${near.hit.q ? `, "${near.hit.q.slice(0, 80)}"` : ''} (${Math.round(near.score * 100)}% alike), 0 tokens. Start with ! for a fresh answer]\n\n${near.hit.answer}`,
             }
           }
         }
       }
-      await record($, 'info', 'not asked before (or changed since) → no saved answer')
     }
 
     const mode = state.isQuotaMode && cfg.local === 'on' ? 'auto' : cfg.local
-    if (mode !== cfg.local) await record($, 'info', 'quota nearly used up → general questions go to the local model by themselves')
+    if (mode !== cfg.local) await record($, 'info', 'quota almost finished, so general questions now go to the free local model')
     const localPrompt = isFresh ? undefined : routeLocal(words, mode)
     if (localPrompt !== undefined) {
       const first = teamOrder(localPrompt, cfg.localModel, cfg.fastModel, cfg.urduModel)[0]
       $.ui.status(`quota-saver: local model (${first}) is thinking…`)
-      await record($, 'local', `no project context needed → asking the local team (${first} first)`)
+      await record($, 'local', `general question, so the free local model (${first}) will try first`)
       const reply = await answerLocally($, opts, localPrompt)
       $.ui.status(undefined)
       if (reply.isAnswered) {
         await countFreeAnswer($)
         await count($, { localAnswers: 1 })
-        await record($, 'saved', `${reply.model} answered in ${reply.secs}s, answer checked: 0 Claude tokens${reply.isLanguageMatch ? '' : ' (in another language)'}`)
+        await record($, 'saved', `free local model ${reply.model} answered in ${reply.secs}s, Claude not used (0 tokens)${reply.isLanguageMatch ? '' : ' (reply is in another language)'}`)
         return {
           drop: `[quota-saver: local model ${reply.model}, 0 Claude tokens. Start with ! to ask Claude instead]\n\n${reply.text}`,
         }
       }
       $.ui.toast(`No usable local answer (${reply.reason}). Asking Claude instead.`)
-      await record($, 'error', `no usable local answer (${reply.reason}) → falling back to Claude`)
-    } else if (cfg.local !== 'off' && !isFresh) {
-      await record($, 'info', 'needs Claude (mentions the project, or is a task) → local model not used')
+      await record($, 'error', `local model could not answer (${reply.reason}), so Claude will answer`)
     }
 
     const sentWords = localPrompt ?? words
@@ -136,12 +133,10 @@ export function installPromptRouter(on: On, opts: Options) {
       await record(
         $,
         'info',
-        `task type: ${intent} → added a hidden "${intent}" guide (+${k(tokens(GUIDE[intent].length))} tokens): ${GUIDE_SUMMARY[intent]}`,
+        `looks like a "${intent}" task, so Claude got short tips for it (+${k(tokens(GUIDE[intent].length))} tokens): ${GUIDE_SUMMARY[intent]}`,
       )
-    } else {
-      await record($, 'info', 'no task type matched → no guide added')
     }
-    await record($, 'claude', `sent to Claude: your words unchanged${sentWords !== rawWords ? ' (after the shortcut/prefix above)' : ''}; Claude reads Roman Urdu directly`)
+    await record($, 'claude', 'sent to Claude')
     return next({ ...e, text, ...(context ? { context } : {}) })
   }).catch(($, e, next) => next(e))
 

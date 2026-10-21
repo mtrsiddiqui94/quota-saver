@@ -28,8 +28,9 @@ export async function recordTurnCompare($: EngineInterface, usage: TurnUsage | u
   await record(
     $,
     'turn',
-    `used ${k(c.used)} tokens · without Quota Saver ≈ ${k(c.baseline)} · saved ≈ ${k(c.saved)} (${pct}%) over ${c.requests} request${c.requests === 1 ? '' : 's'}` +
-      ` · of which full price ${k(c.fullPrice)}, cheap cache reads ${k(c.cheap)}` +
-      (c.saved === 0 ? ' · nothing to cut yet: savings come once Claude runs commands or reads files' : ''),
+    `this message cost ${k(c.used)} tokens (${k(c.fullPrice)} full price, ${k(c.cheap)} at the cheap re-read price)` +
+      (c.saved > 0
+        ? ` · Quota Saver saved ${k(c.saved)} (${pct}%): without it, ${k(c.baseline)}`
+        : ' · nothing to save this time: savings happen when Claude reads files or runs commands'),
   )
 }

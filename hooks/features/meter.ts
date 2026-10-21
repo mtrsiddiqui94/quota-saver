@@ -39,7 +39,7 @@ export async function refreshStatus($: EngineInterface) {
     const resets = r.resetsAt ? ` It resets at ${clock(Date.parse(r.resetsAt))}.` : ''
     const toFull = minutesToFull(state.burn.get(`${r.kind}:${r.resetsAt ?? ''}`) ?? [])
     const pace = toFull !== undefined ? ` At this pace it is full in ~${humanMinutes(toFull)}.` : ''
-    await record($, 'info', `${window} quota ${r.percentUsed}% used`)
+    await record($, 'info', `you have used ${r.percentUsed}% of your ${window} quota`)
     $.ui.toast(
       `${window} quota ${r.percentUsed}% used.${pace}${resets} For easy tasks: /model haiku, and /local auto for general questions.`,
     )
