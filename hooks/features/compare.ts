@@ -8,14 +8,16 @@ import type { EngineInterface, TurnUsage } from 'claude-code'
 import { k, record } from '../core/activity'
 import { count, state } from '../core/state'
 
-export type TurnCompare = { used: number; baseline: number; saved: number; requests: number }
+export type TurnCompare = { used: number; baseline: number; saved: number; requests: number; fullPrice: number; cheap: number }
 
 export function compareTurn(usage: TurnUsage, keptOutAtStart: number, keptOutAtEnd: number, toolCalls: number): TurnCompare {
   const used = usage.input_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens + usage.output_tokens
   const requests = toolCalls + 1
   // What was kept out grows during the turn: average its start and end over the turn's requests.
   const saved = Math.round(((keptOutAtStart + keptOutAtEnd) / 2) * requests)
-  return { used, baseline: used + saved, saved, requests }
+  // Cache reads cost a fraction of the input rate; the rest is billed in full.
+  const cheap = usage.cache_read_input_tokens
+  return { used, baseline: used + saved, saved, requests, fullPrice: used - cheap, cheap }
 }
 
 export async function recordTurnCompare($: EngineInterface, usage: TurnUsage | undefined) {
@@ -27,6 +29,7 @@ export async function recordTurnCompare($: EngineInterface, usage: TurnUsage | u
     $,
     'turn',
     `used ${k(c.used)} tokens · without Quota Saver ≈ ${k(c.baseline)} · saved ≈ ${k(c.saved)} (${pct}%) over ${c.requests} request${c.requests === 1 ? '' : 's'}` +
+      ` · of which full price ${k(c.fullPrice)}, cheap cache reads ${k(c.cheap)}` +
       (c.saved === 0 ? ' · nothing to cut yet: savings come once Claude runs commands or reads files' : ''),
   )
 }

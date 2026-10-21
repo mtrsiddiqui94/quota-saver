@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.17.1] - 2026-10-21
+
+### Changed
+- Each turn in `/activity` splits its tokens into full price (new input,
+  cache writes, output) and cheap cache reads, so a large total made mostly
+  of cache reads is not mistaken for a large cost.
+
 ## [0.17.0] - 2026-10-21
 
 ### Added

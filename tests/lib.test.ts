@@ -85,8 +85,8 @@ test('junk paths are told apart from source', async () => {
 
 test('turn comparison multiplies what was kept out by the requests made', async () => {
   const usage = { input_tokens: 1_000, output_tokens: 500, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 0, model: 'm' }
-  expect(compareTurn(usage, 0, 10_000, 3)).toEqual({ used: 41_500, baseline: 61_500, saved: 20_000, requests: 4 })
-  expect(compareTurn(usage, 0, 0, 0)).toEqual({ used: 41_500, baseline: 41_500, saved: 0, requests: 1 })
+  expect(compareTurn(usage, 0, 10_000, 3)).toEqual({ used: 41_500, baseline: 61_500, saved: 20_000, requests: 4, fullPrice: 1_500, cheap: 40_000 })
+  expect(compareTurn(usage, 0, 0, 0)).toEqual({ used: 41_500, baseline: 41_500, saved: 0, requests: 1, fullPrice: 1_500, cheap: 40_000 })
 })
 
 test('typed words are found inside editor blocks', async () => {
