@@ -34,6 +34,7 @@ export function installRules(on: On) {
   // Appended after the engine's sections, so its cached prefix stays untouched.
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
+    state.currentModel = e.model
     if (!state.cfg.isEnabled) return composed
     if (watch.isOn && !noted.isDone) {
       noted.isDone = true

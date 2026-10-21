@@ -720,3 +720,39 @@ describe('local team', () => {
     expect(res.text).toContain('bad:1b')
   })
 })
+
+describe('model advisor', () => {
+  const compose = (model: string) => ({ model, promptModel: model, surfaces: [], tools: [], outputStyle: null, traits: [] })
+
+  test('on Opus, a plain question gets one Haiku suggestion per context', async ($, on) => {
+    world(on)
+    on('prompt.compose', () => ({ sections: [] }))
+    await run($, 'activity', 'on')
+    await $.prompt.compose(compose('claude-opus-5-5'))
+    await submit($, 'what is a closure in javascript?')
+    await submit($, 'what is hoisting?')
+    const text = (await run($, 'activity', 'text')).text ?? ''
+    expect(text.split('model advisor').length - 1).toBe(1)
+    expect(text).toContain('/model haiku')
+  })
+
+  test('on Sonnet, nothing is suggested', async ($, on) => {
+    world(on)
+    on('prompt.compose', () => ({ sections: [] }))
+    await run($, 'activity', 'on')
+    await $.prompt.compose(compose('claude-sonnet-5-5'))
+    await submit($, 'what is a closure?')
+    expect((await run($, 'activity', 'text')).text).not.toContain('model advisor')
+  })
+
+  test('building on Opus is left alone; tests suggest Sonnet', async ($, on) => {
+    world(on)
+    on('prompt.compose', () => ({ sections: [] }))
+    await run($, 'activity', 'on')
+    await $.prompt.compose(compose('claude-opus-5-5'))
+    await submit($, 'add a search box to the users page')
+    expect((await run($, 'activity', 'text')).text).not.toContain('model advisor')
+    await submit($, 'run the tests')
+    expect((await run($, 'activity', 'text')).text).toContain('/model sonnet')
+  })
+})

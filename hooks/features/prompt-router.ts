@@ -12,6 +12,7 @@ import { language, replaceWords, userWords } from '../lib/prompt'
 import { tokens } from '../lib/trim'
 import { routeLocal } from '../lib/local'
 import { answerLocally, teamOrder } from './local-team'
+import { adviseModel } from './model-advisor'
 import { ANSWER_MAX, cacheKey, expand, lookup, remember } from '../lib/memory'
 import type { AnswerCache, Dictionary } from '../lib/memory'
 import { k, record } from '../core/activity'
@@ -104,6 +105,7 @@ export function installPromptRouter(on: On, opts: Options) {
     const text = replaceWords(e.text, rawWords, sentWords)
     const intent = opts.autoIntent ? detectIntent(sentWords) : undefined
     const context = intent ? [...(e.context ?? []), GUIDE[intent]] : e.context
+    if (opts.modelAdvisor) await adviseModel($, intent, sentWords).catch(() => undefined)
     if (intent) {
       await record(
         $,

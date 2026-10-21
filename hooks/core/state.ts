@@ -24,6 +24,7 @@ export type Options = {
   ollamaUrl: string
   setupLocalModel: 'yes' | 'ask' | 'no'
   guardJunk: boolean
+  modelAdvisor: boolean
 }
 
 export function parseOptions(options: PluginOptions): Options {
@@ -35,6 +36,7 @@ export function parseOptions(options: PluginOptions): Options {
     localCache: options.localCache !== false,
     ollamaUrl: String(options.ollamaUrl ?? 'http://localhost:11434'),
     guardJunk: options.guardJunk !== false,
+    modelAdvisor: options.modelAdvisor !== false,
     setupLocalModel: options.setupLocalModel === 'yes' || options.setupLocalModel === 'no' ? options.setupLocalModel : 'ask',
   }
 }
@@ -65,6 +67,10 @@ export const state = {
   warnedAt: 0,
   /** A handoff note waiting for the next /clear, and the one in force now. */
   handoff: {} as { pending?: string; active?: string },
+  /** The main loop's model, as the last system prompt was composed for it. */
+  currentModel: undefined as string | undefined,
+  /** Model advice already given in this context window, by suggested model. */
+  advised: new Set<string>(),
   /** Whether this context window's fixed cost was audited yet. */
   isAudited: false,
   /** The main loop's model on its last turn, and the context it carried then. */
@@ -91,6 +97,7 @@ export function resetContext() {
   state.refused.clear()
   state.warnedAt = 0
   state.isAudited = false
+  state.advised.clear()
   state.lastTurn = undefined
   state.keptOut = 0
   state.pendingBlocked.clear()

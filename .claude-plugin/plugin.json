@@ -1,6 +1,6 @@
 {
   "name": "quota-saver",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Makes your Claude Code quota last longer. English + Roman Urdu prompts.",
   "author": {
     "name": "mtrsiddiqui94"
@@ -57,6 +57,12 @@
       "type": "boolean",
       "title": "Guard junk files",
       "description": "Stop whole reads of dependency and build folders, lock files and minified bundles (a retry goes through).",
+      "default": true
+    },
+    "modelAdvisor": {
+      "type": "boolean",
+      "title": "Model advisor",
+      "description": "When a heavy model (Opus) is on and the task is light, say once which lighter model fits.",
       "default": true
     }
   },

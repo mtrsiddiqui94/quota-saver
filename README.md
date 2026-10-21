@@ -19,6 +19,7 @@
 | **Cheap explorer** | A `quota-saver:explorer` subagent on Haiku for broad codebase searches. |
 | **Audit** | `/quota-saver audit` measures what rides on *every* request before your prompt: MCP tool schemas per server, CLAUDE.md and other memory files, skills and agents, and says what to cut. Runs once by itself per context and speaks up only if something is heavy. |
 | **Quota alarm** | At 80% and 95% of the 5-hour or weekly limit, a notice says when it resets and how to stretch it. |
+| **Model advisor** | The model is the biggest lever on quota. On Opus, a light task (a question, an explanation, running tests, a review) gets one suggestion per context: `/model haiku` or `/model sonnet`, with what switching now would cost in cache. Setting `modelAdvisor`. |
 | **Model-switch warning** | Changing model mid-conversation restarts the prompt cache, re-sending the whole context at full price. The plugin says how many tokens that cost. |
 | **Savings report** | `/quota-saver week` (or `month`): what was saved each day. |
 | **Meter** | Status line: `quota-saver · ctx 42% · 5h 30% · saved ~12k tok`, with a nudge at 65% and 85% context. |
@@ -100,6 +101,7 @@ In `/config`, under `quota-saver`:
 | `dedupeReads` | `true` | Refuse a repeat read of an unchanged file |
 | `autoIntent` | `true` | Attach the lean task guide |
 | `localCache` | `true` | Serve repeated questions from disk |
+| `modelAdvisor` | `true` | Suggest a lighter model for light tasks on Opus |
 | `guardJunk` | `true` | Refuse whole reads of dependency/build folders, lock files, minified bundles |
 | `ollamaUrl` | `http://localhost:11434` | Local model server |
 | `setupLocalModel` | `ask` | `yes` / `ask` / `no`: what to do about the local model on the first session |

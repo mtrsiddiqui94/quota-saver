@@ -10,6 +10,7 @@ Roman Urdu ya English, jaise chahein likhein. Quota Saver tokens wahan bachata h
 | **Junk guard** | `node_modules`, `dist`, `build`, lock files aur `.min.js` jaisi faltu files poori parhne se rokta hai. Asal code par koi asar nahi. |
 | **Audit** | `/quota-saver audit`: har request ke saath kya jaata hai (MCP tools, CLAUDE.md, skills) aur kya kam karna chahiye. |
 | **Quota alarm** | 5 ghante ya hafte ki limit 80% aur 95% par pahunche to notice deta hai, ke kab reset hogi aur kaise bachayein. |
+| **Model advisor** | Aap Opus par hon aur kaam halka ho (sawal, explain, tests, review), to ek dafa batata hai ke `/model haiku` ya `/model sonnet` kaafi kam quota mein ye kaam kar dega. |
 | **Model badalne ki warning** | Beech mein model badalne se prompt cache toot jaata hai. Plugin batata hai ke is se kitne tokens poore daam par gaye. |
 | **Read guard** | Bari file poori parhne se rokta hai (pehle search, phir sirf zaroori lines). Jo file pehle parh li aur badli nahi, wo dobara nahi parhi jaati. |
 | **Auto task samajh** | "login ka error theek karo", "ye samjhao", "tests chalao": prompt dekh kar khud mukhtasar hidayat saath bhejta hai. Koi command yaad rakhne ki zaroorat nahi. |

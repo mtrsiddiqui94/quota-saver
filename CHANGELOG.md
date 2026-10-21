@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.13.0] - 2026-10-21
+
+### Added
+- Model advisor: on Opus, a light task gets one suggestion per context
+  (`/model haiku` for questions and explanations, `/model sonnet` for tests
+  and reviews), with the cache cost of switching mid-conversation. Building
+  and fixing are left alone. Setting `modelAdvisor`.
+
 ## [0.12.0] - 2026-10-21
 
 ### Added
