@@ -2,7 +2,7 @@
 
 **A Claude Code plugin that stretches your quota.** It cuts tokens where they are actually spent (tool output, file reads, conversation history) and answers what it can on your own machine. Write in English, Roman Urdu or a mix.
 
-> Roman Urdu guide: [docs/guide-roman-urdu.md](docs/guide-roman-urdu.md)
+> Step-by-step install: [INSTALL.md](INSTALL.md) · Roman Urdu guide: [docs/guide-roman-urdu.md](docs/guide-roman-urdu.md)
 
 ## What it does
 

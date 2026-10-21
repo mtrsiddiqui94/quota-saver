@@ -57,6 +57,8 @@ Kamzor PC (GPU ke baghair) par har jawab mein 5-20 second lag sakte hain. Is se 
 
 ## Install (Mac, Windows, Linux, VS Code)
 
+Poore step by step tareeqe ke liye [INSTALL.md](../INSTALL.md) dekhein.
+
 Plugin Claude Code ke andar chalta hai, is liye Node, Python ya koi aur cheez install karne ki zaroorat nahi. English README: [../README.md](../README.md)
 
 **Is folder se (apni machine par):**
