@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.10.1] - 2026-10-21
+
+### Fixed
+- Editors add blocks around a prompt (VS Code's `<browser_instruction>`, for
+  one). The plugin judged that whole text, so the task type, the answer cache,
+  the local-model routing and shortcuts missed what the person typed. It now
+  works on the typed words alone and still sends Claude the whole prompt.
+
+### Changed
+- `/activity` explains each step: the typed words with their language and
+  size, the editor blocks around them, whether a saved answer existed, why the
+  local model was or was not used, which hidden guide was added (with its size
+  and what it asks), that the words went to Claude unchanged, the lean rules
+  in the system prompt, and a turn's tokens split into new, cache-written and
+  cache-read. A turn with nothing to cut says why.
+
 ## [0.10.0] - 2026-10-21
 
 ### Added

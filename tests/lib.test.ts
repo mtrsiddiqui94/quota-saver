@@ -6,6 +6,7 @@ import { hasModel } from '../hooks/features/local-setup'
 import { compareTurn } from '../hooks/features/compare'
 import { junkReason } from '../hooks/lib/junk'
 import { routeLocal } from '../hooks/lib/local'
+import { language, replaceWords, userWords } from '../hooks/lib/prompt'
 import { trimOutput } from '../hooks/lib/trim'
 
 test('long output keeps head, tail and error lines', async () => {
@@ -81,4 +82,17 @@ test('turn comparison multiplies what was kept out by the requests made', async 
   const usage = { input_tokens: 1_000, output_tokens: 500, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 0, model: 'm' }
   expect(compareTurn(usage, 0, 10_000, 3)).toEqual({ used: 41_500, baseline: 61_500, saved: 20_000, requests: 4 })
   expect(compareTurn(usage, 0, 0, 0)).toEqual({ used: 41_500, baseline: 41_500, saved: 0, requests: 1 })
+})
+
+test('typed words are found inside editor blocks', async () => {
+  const t = '<browser_instruction>tools...</browser_instruction>\nfix the bug<system-reminder>x</system-reminder>'
+  expect(userWords(t)).toBe('fix the bug')
+  expect(userWords('plain prompt')).toBe('plain prompt')
+  expect(replaceWords(t, 'fix the bug', 'fix the login bug')).toBe('<browser_instruction>tools...</browser_instruction>\nfix the login bug<system-reminder>x</system-reminder>')
+  expect(replaceWords('dp', 'dp', 'deploy')).toBe('deploy')
+})
+
+test('reply language is told apart', async () => {
+  expect(language('main aik android game banana chahta hun ideas do')).toBe('Roman Urdu')
+  expect(language('give me ideas for an android game')).toBe('English')
 })

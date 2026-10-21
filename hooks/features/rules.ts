@@ -2,7 +2,11 @@
 
 import type { On } from 'claude-code'
 
+import { record, watch } from '../core/activity'
 import { state } from '../core/state'
+import { tokens } from '../lib/trim'
+
+const noted = { isDone: false }
 
 // Short on purpose: this text itself rides on every request.
 const RULES = `# Token economy (quota-saver plugin)
@@ -31,6 +35,10 @@ export function installRules(on: On) {
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
     if (!state.cfg.isEnabled) return composed
+    if (watch.isOn && !noted.isDone) {
+      noted.isDone = true
+      await record($, 'info', `system prompt: +${tokens(RULES.length)} tokens of lean rules (answer first, no recaps, search before reading, small edits, reply in your language)`)
+    }
     const sections = [...composed.sections, { id: 'quota-saver:rules', text: RULES, scope: 'session' as const }]
     if (state.handoff.active) {
       sections.push({

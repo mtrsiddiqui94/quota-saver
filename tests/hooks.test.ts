@@ -422,7 +422,7 @@ describe('activity', () => {
     const list = await run($, 'activity', 'text')
     expect(list.text).toContain('"dp"')
     expect(list.text).toContain('shortcut expanded locally')
-    expect(list.text).toContain('lean fix guide attached')
+    expect(list.text).toContain('added a hidden "fix" guide')
     expect(list.text).toContain('sent to Claude')
 
     await run($, 'activity', 'off')
@@ -606,5 +606,36 @@ describe('used vs without the plugin', () => {
     await run($, 'activity', 'on')
     await submit($, 'auth kaise kaam karta hai')
     expect((await run($, 'activity', 'text')).text).toContain('used 0 tokens · without Quota Saver ≈ 50.4k')
+  })
+})
+
+describe('editor blocks around the prompt', () => {
+  const WRAP = '<browser_instruction># Claude in Chrome\nYou have access to browser tools. '.padEnd(4000, 'x') + '</browser_instruction>'
+
+  test('only the typed words are judged and shown; Claude still gets the whole prompt', async ($, on) => {
+    const { seen } = world(on)
+    await run($, 'activity', 'on')
+    const full = `${WRAP}\nmain aik android game banana chahta hun ideas do`
+    await submit($, full)
+    expect(seen.prompts[0]?.text).toBe(full)
+    expect(seen.prompts[0]?.context?.join(' ')).toContain('task: build')
+    const text = (await run($, 'activity', 'text')).text ?? ''
+    expect(text).toContain('"main aik android game banana chahta hun ideas do" · Roman Urdu')
+    expect(text).toContain('tokens of editor instructions around it')
+    expect(text).not.toContain('browser_instruction')
+  })
+
+  test('a shortcut inside a wrapped prompt expands and keeps the wrapper', async ($, on) => {
+    const { seen } = world(on, { store: { dictionary: { dp: 'deploy to staging' } } })
+    await submit($, `${WRAP}\ndp`)
+    expect(seen.prompts[0]?.text).toBe(`${WRAP}\ndeploy to staging`)
+  })
+
+  test('the cache keys on the typed words, so a new wrapper still hits', async ($, on) => {
+    const key = cacheKey(CWD, 'auth kaise kaam karta hai')
+    const { seen } = world(on, { store: { answers: { [key]: { answer: 'JWT se.', at: 999_000 } } } })
+    const res = await submit($, `${WRAP}\nauth kaise kaam karta hai`)
+    expect(res.drop).toContain('JWT se.')
+    expect(seen.prompts.length).toBe(0)
   })
 })

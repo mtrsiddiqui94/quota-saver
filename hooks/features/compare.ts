@@ -26,6 +26,7 @@ export async function recordTurnCompare($: EngineInterface, usage: TurnUsage | u
   await record(
     $,
     'turn',
-    `used ${k(c.used)} tokens · without Quota Saver ≈ ${k(c.baseline)} · saved ≈ ${k(c.saved)} (${pct}%) over ${c.requests} request${c.requests === 1 ? '' : 's'}`,
+    `used ${k(c.used)} tokens · without Quota Saver ≈ ${k(c.baseline)} · saved ≈ ${k(c.saved)} (${pct}%) over ${c.requests} request${c.requests === 1 ? '' : 's'}` +
+      (c.saved === 0 ? ' · nothing to cut yet: savings come once Claude runs commands or reads files' : ''),
   )
 }

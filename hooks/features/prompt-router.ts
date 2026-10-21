@@ -7,7 +7,9 @@
 
 import type { Args, EngineInterface, On } from 'claude-code'
 
-import { detectIntent, GUIDE } from '../lib/intent'
+import { detectIntent, GUIDE, GUIDE_SUMMARY } from '../lib/intent'
+import { language, replaceWords, userWords } from '../lib/prompt'
+import { tokens } from '../lib/trim'
 import { askLocal, routeLocal } from '../lib/local'
 import { ANSWER_MAX, cacheKey, expand, lookup, remember } from '../lib/memory'
 import type { AnswerCache, Dictionary } from '../lib/memory'
@@ -43,15 +45,24 @@ export function installPromptRouter(on: On, opts: Options) {
     turn.keptOutAtStart = state.keptOut
     if (!cfg.isEnabled || e.command || e.isMeta) return next(e)
 
+    // Judge, cache and show only what the person typed; editor blocks around it go to Claude untouched.
     const dict = ((await $.store.get(STORE.dictionary)) ?? {}) as Dictionary
-    const isFresh = e.text.trimStart().startsWith('!')
-    const original = isFresh ? e.text.trimStart().slice(1) : e.text
-    const text = expand(original, dict)
-    await record($, 'prompt', `"${e.text.slice(0, 80)}"${isFresh ? ' (! = fresh, skip cache and local model)' : ''}`)
-    if (text !== original) await record($, 'saved', `shortcut expanded locally → "${text.slice(0, 80)}"`)
+    const rawWords = userWords(e.text)
+    const isFresh = rawWords.startsWith('!')
+    const typed = isFresh ? rawWords.slice(1).trim() : rawWords
+    const words = expand(typed, dict)
+    const hostTokens = tokens(Math.max(0, e.text.length - rawWords.length))
+    await record(
+      $,
+      'prompt',
+      `"${words.slice(0, 100)}" · ${language(words)}, ${words.split(' ').filter(Boolean).length} words, ≈ ${k(tokens(words.length))} tokens` +
+        (hostTokens > 50 ? ` · plus ≈ ${k(hostTokens)} tokens of editor instructions around it, sent as they are` : '') +
+        (isFresh ? ' · ! = fresh: cache and local model skipped' : ''),
+    )
+    if (words !== typed) await record($, 'saved', `shortcut expanded locally: "${typed}" → "${words.slice(0, 80)}"`)
 
     if (opts.localCache && !e.attachments?.length) {
-      const key = cacheKey(await $.session.cwd(), text)
+      const key = cacheKey(await $.session.cwd(), words)
       const now = await $.clock.now()
       const hit = isFresh ? undefined : lookup(((await $.store.get(STORE.answers)) ?? {}) as AnswerCache, key, now)
       if (hit) {
@@ -63,9 +74,10 @@ export function installPromptRouter(on: On, opts: Options) {
         }
       }
       turn.key = key
+      await record($, 'info', 'not asked before (or changed since) → no saved answer')
     }
 
-    const localPrompt = isFresh ? undefined : routeLocal(text, cfg.local)
+    const localPrompt = isFresh ? undefined : routeLocal(words, cfg.local)
     if (localPrompt !== undefined) {
       $.ui.status(`quota-saver: local model (${cfg.localModel}) is thinking…`)
       await record($, 'local', `no project context needed → asking local model ${cfg.localModel}`)
@@ -83,14 +95,25 @@ export function installPromptRouter(on: On, opts: Options) {
       }
       $.ui.toast(`Local model failed: ${reply.reason}. Asking Claude instead.`)
       await record($, 'error', `local model failed (${reply.reason}) → falling back to Claude`)
+    } else if (cfg.local !== 'off' && !isFresh) {
+      await record($, 'info', 'needs Claude (mentions the project, or is a task) → local model not used')
     }
 
-    const sent = localPrompt ?? text
-    const intent = opts.autoIntent ? detectIntent(sent) : undefined
+    const sentWords = localPrompt ?? words
+    const text = replaceWords(e.text, rawWords, sentWords)
+    const intent = opts.autoIntent ? detectIntent(sentWords) : undefined
     const context = intent ? [...(e.context ?? []), GUIDE[intent]] : e.context
-    if (intent) await record($, 'info', `task looks like "${intent}" → lean ${intent} guide attached (shorter work and reply)`)
-    await record($, 'claude', 'sent to Claude')
-    return next({ ...e, text: sent, ...(context ? { context } : {}) })
+    if (intent) {
+      await record(
+        $,
+        'info',
+        `task type: ${intent} → added a hidden "${intent}" guide (+${k(tokens(GUIDE[intent].length))} tokens): ${GUIDE_SUMMARY[intent]}`,
+      )
+    } else {
+      await record($, 'info', 'no task type matched → no guide added')
+    }
+    await record($, 'claude', `sent to Claude: your words unchanged${sentWords !== rawWords ? ' (after the shortcut/prefix above)' : ''}; Claude reads Roman Urdu directly`)
+    return next({ ...e, text, ...(context ? { context } : {}) })
   }).catch(($, e, next) => next(e))
 
   on('tool.call', ($, e, next) => {

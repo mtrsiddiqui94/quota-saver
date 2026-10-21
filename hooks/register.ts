@@ -33,7 +33,11 @@ export const register: Register = (on, options) => {
     const done = await next(e)
     if (e.agentId === undefined && state.cfg.isEnabled && e.usage) {
       const u = e.usage
-      await record($, 'turn', `turn done (${e.reason}): ${k(u.input_tokens)} new in, ${k(u.cache_read_input_tokens)} cached in, ${k(u.output_tokens)} out · ${u.model}`)
+      await record(
+        $,
+        'turn',
+        `turn done (${e.reason}) · ${u.model} · in: ${k(u.input_tokens)} new + ${k(u.cache_creation_input_tokens)} written to cache + ${k(u.cache_read_input_tokens)} read from cache (cheap) · out: ${k(u.output_tokens)}`,
+      )
       await recordTurnCompare($, u).catch(() => undefined)
     }
     if (e.agentId === undefined) {

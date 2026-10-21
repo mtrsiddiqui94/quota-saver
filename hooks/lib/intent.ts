@@ -19,6 +19,15 @@ export function detectIntent(text: string): Intent | undefined {
   return undefined
 }
 
+/** What each guide asks of Claude, in a few words, for the activity view. */
+export const GUIDE_SUMMARY: Record<Intent, string> = {
+  fix: 'targeted search, smallest fix, narrow check, ≤5-line reply',
+  explain: 'search first, no edits, ≤10-line reply with file:line',
+  test: 'quiet test run, failures only, ≤6-line reply',
+  review: 'diff only, real bugs only, ≤8 items',
+  build: 'follow an existing pattern, small edits, one short question if unclear, ≤6-line reply',
+}
+
 export const GUIDE: Record<Intent, string> = {
   fix: 'quota-saver (task: fix): locate the cause with targeted search, read only the relevant line ranges, make the smallest correct Edit, verify with the narrowest check (pipe output through tail). Final reply at most 5 lines: cause, fix (file:line), how verified.',
   explain: 'quota-saver (task: explain): find only what is needed (search first, line ranges; delegate broad searches to quota-saver:explorer). Change no files. Reply at most 10 lines with file:line references, no preamble.',
